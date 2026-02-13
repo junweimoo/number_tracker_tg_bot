@@ -1,0 +1,8 @@
+{
+  "regex": {
+    "message_regex": "number\\s+(\\d{1,3})"
+  },
+  "replies": {
+    "reply_message": "I detected the number: {number}"
+  }
+}

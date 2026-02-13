@@ -54,15 +54,20 @@ class TelegramBot:
         """Registers a handler for generic text messages."""
         self.message_handlers.append(handler)
 
-    async def _make_request(self, method, params=None):
+    async def _make_request(self, method, params=None, json_data=None):
         """Makes an asynchronous request to the Telegram API."""
         url = self.base_url + method
         data = None
-        if params:
+        headers = {}
+        
+        if json_data:
+            data = json.dumps(json_data).encode('utf-8')
+            headers = {'Content-Type': 'application/json'}
+        elif params:
             data = urllib.parse.urlencode(params).encode('utf-8')
 
         # Create the request object (POST if data is provided)
-        req = urllib.request.Request(url, data=data)
+        req = urllib.request.Request(url, data=data, headers=headers)
 
         loop = asyncio.get_running_loop()
         response = await loop.run_in_executor(self.executor, self._perform_request, req)
@@ -82,7 +87,6 @@ class TelegramBot:
                 if updates.get('ok'):
                     for update in updates['result']:
                         self.offset = update['update_id'] + 1
-                        # Process each update concurrently
                         asyncio.create_task(self._dispatch(update))
             except Exception as e:
                 logger.error(f"Error polling: {e}")
@@ -119,3 +123,21 @@ class TelegramBot:
     async def send_message(self, chat_id, text):
         """Sends a message to a chat."""
         await self._make_request('sendMessage', {'chat_id': chat_id, 'text': text})
+
+    async def send_reply(self, chat_id, message_id, text):
+        """Sends a reply to a specific message."""
+        params = {
+            'chat_id': chat_id,
+            'text': text,
+            'reply_parameters': json.dumps({'message_id': message_id})
+        }
+        await self._make_request('sendMessage', params)
+
+    async def set_message_reaction(self, chat_id, message_id, emoji):
+        """Sets a reaction on a message with a given emoji."""
+        json_data = {
+            'chat_id': chat_id,
+            'message_id': message_id,
+            'reaction': [{'type': 'emoji', 'emoji': emoji}]
+        }
+        await self._make_request('setMessageReaction', json_data=json_data)
