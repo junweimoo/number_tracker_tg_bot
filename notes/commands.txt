@@ -1,0 +1,3 @@
+Query table in terminal:
+psql -U postgres -d numbertrackingbot
+\dt
