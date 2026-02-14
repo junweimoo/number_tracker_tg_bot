@@ -14,6 +14,8 @@ class SchemaManager:
         self.init_user_data()
         self.init_user_attendance()
         self.init_user_number_counts()
+        self.init_user_daily_number_counts()
+        self.init_match_counts()
 
     def init_number_logs(self):
         # 1. Create the base table
@@ -155,4 +157,46 @@ class SchemaManager:
         );
         """
         self.db.execute_query(create_table_query)
+
+        self.db.execute_query("""
+            CREATE INDEX IF NOT EXISTS idx_user_counts_user_chat ON user_number_counts (user_id, chat_id);
+        """)
         logger.info("Table 'user_number_counts' initialized.")
+
+    def init_user_daily_number_counts(self):
+        create_table_query = """
+        CREATE TABLE IF NOT EXISTS user_daily_number_counts (
+            user_id     BIGINT NOT NULL,
+            chat_id     BIGINT NOT NULL,
+            log_date    DATE   NOT NULL,
+            number      INTEGER NOT NULL,
+            count       BIGINT DEFAULT 1,
+            PRIMARY KEY (user_id, chat_id, log_date, number)
+        );
+        """
+        self.db.execute_query(create_table_query)
+
+        self.db.execute_query("""
+            CREATE INDEX IF NOT EXISTS idx_user_daily_counts_user_chat ON user_daily_number_counts (user_id, chat_id);
+        """)
+        logger.info("Table 'user_daily_number_counts' initialized.")
+
+    def init_match_counts(self):
+        create_table_query = """
+        CREATE TABLE IF NOT EXISTS match_counts (
+            id           SERIAL,
+            chat_id      BIGINT       NOT NULL,
+            thread_id    BIGINT,
+            user_id_1    BIGINT       NOT NULL,
+            user_id_2    BIGINT       NOT NULL,
+            match_type   TEXT         NOT NULL,
+            count        BIGINT       DEFAULT 0,
+            PRIMARY KEY (chat_id, user_id_1, user_id_2, match_type)
+        );
+        """
+        self.db.execute_query(create_table_query)
+
+        self.db.execute_query("""
+            CREATE INDEX IF NOT EXISTS idx_match_counts_users_chat ON match_counts (user_id_1, user_id_2, chat_id);
+        """)
+        logger.info("Table 'match_counts' and its index initialized.")

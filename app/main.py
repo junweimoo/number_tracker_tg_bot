@@ -5,11 +5,12 @@ from config import Config
 from database.database_core import Database
 from database.database_schema import SchemaManager
 from handlers import start_handler, echo_handler, number_parser_handler, stats_handler
-from services.number_log_service import NumberLogService
-from services.stats_view_service import StatsViewService
+from service.number_log_service import NumberLogService
+from service.stats_view_service import StatsViewService
 from repository.number_log_repository import NumberLogRepository
 from repository.attendance_repository import AttendanceRepository
 from repository.stats_repository import StatsRepository
+from repository.match_log_repository import MatchLogRepository
 
 if __name__ == '__main__':
     # Initialize env variables
@@ -38,7 +39,8 @@ if __name__ == '__main__':
     repositories = {
         'number_log': NumberLogRepository(db),
         'attendance': AttendanceRepository(db),
-        'stats': StatsRepository(db)
+        'stats': StatsRepository(db),
+        'match_log': MatchLogRepository(db)
     }
 
     # Initialize Services
@@ -62,7 +64,6 @@ if __name__ == '__main__':
     bot.register_command_handler('/stats', stats_handler)
 
     bot.register_message_handler(number_parser_handler)
-    bot.register_message_handler(echo_handler)
 
     # Start the bot
     try:

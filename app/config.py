@@ -20,3 +20,7 @@ class Config:
     @property
     def reply_message(self):
         return self.data.get('replies', {}).get('reply_message')
+
+    @property
+    def developer_user_ids(self):
+        return self.data.get('developer_user_ids', [])

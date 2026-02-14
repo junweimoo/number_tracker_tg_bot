@@ -10,6 +10,14 @@ class StatsRepository:
         DO UPDATE SET count = user_number_counts.count + 1
         """
 
+    def get_upsert_daily_counts_query(self):
+        return """
+        INSERT INTO user_daily_number_counts (user_id, chat_id, log_date, number, count)
+        VALUES (%s, %s, %s, %s, 1)
+        ON CONFLICT (user_id, chat_id, log_date, number) 
+        DO UPDATE SET count = user_daily_number_counts.count + 1
+        """
+
     def get_user_stats(self, user_id, chat_id):
         query = """
         SELECT sum(count), sum(number * count)
