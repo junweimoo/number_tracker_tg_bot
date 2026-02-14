@@ -248,7 +248,7 @@ class NumberLogService:
                     _, last_ts, _ = history[-1]
                     last_ts_sgt = last_ts.astimezone(sgt_timezone)
                     last_login_date = last_ts_sgt.date()
-            
+
             should_mark_attendance = False
             if last_login_date == today_date:
                 should_mark_attendance = False
@@ -335,6 +335,17 @@ class NumberLogService:
                         match_type.value
                     )
                     transaction_queries.append((upsert_match_counts_query, match_counts_params))
+
+            # F. Update user_data bitmap
+            upsert_bitmap_query = self.user_repo.get_upsert_user_bitmap_query()
+            bitmap_params = (
+                message.user_id,
+                message.chat_id,
+                user_name,
+                number,
+                number
+            )
+            transaction_queries.append((upsert_bitmap_query, bitmap_params))
 
             # Execute Transaction
             self.db.execute_transaction(transaction_queries)

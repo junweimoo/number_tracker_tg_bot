@@ -28,3 +28,18 @@ class UserRepository:
 
     def get_last_login_date_query(self):
         return "SELECT last_login_date FROM user_data WHERE user_id = %s AND chat_id = %s"
+
+    def get_upsert_user_bitmap_query(self):
+        """
+        Upserts the user_data row and updates the numbers_bitmap.
+        The bitmap is updated by OR-ing the existing bitmap with a new bitmask.
+        The new bitmask has a 1 at the position corresponding to the number (0-100).
+        """
+        return """
+        INSERT INTO user_data (user_id, chat_id, user_name, numbers_bitmap)
+        VALUES (%s, %s, %s, set_bit(repeat('0', 128)::bit(128), %s, 1))
+        ON CONFLICT (user_id, chat_id) DO UPDATE
+        SET 
+            user_name = EXCLUDED.user_name,
+            numbers_bitmap = set_bit(user_data.numbers_bitmap, %s, 1)
+        """
