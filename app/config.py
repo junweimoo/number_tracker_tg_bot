@@ -37,3 +37,10 @@ class Config:
     def forwarding_chat_ids(self):
         return self.data.get('forwarding_chat_ids', {})
 
+    @property
+    def daily_stats_chat_ids(self):
+        return self.data.get('daily_stats_chat_ids', [])
+
+    @property
+    def timezone_gmt(self):
+        return self.data.get('timezone_gmt', 0)

@@ -43,7 +43,7 @@ class TelegramBot:
         self.command_handlers = {}
         self.message_handlers = []
         self.offset = 0
-        self.executor = ThreadPoolExecutor(max_workers=10)
+        self.executor = ThreadPoolExecutor(max_workers=8)
         self.context = context if context is not None else {}
         self.context['bot'] = self
         self.context['lock_manager'] = ChatLockManager()

@@ -13,5 +13,7 @@
   },
   "forwarding_chat_ids": {
     "-5146811831": ["-5079989154"]
-  }
+  },
+  "daily_stats_chat_ids": ["-5146811831"],
+  "timezone_gmt": 8
 }

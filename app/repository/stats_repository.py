@@ -25,3 +25,14 @@ class StatsRepository:
         WHERE user_id = %s AND chat_id = %s
         """
         return self.db.fetch_one(query, (user_id, chat_id))
+
+    def get_daily_average(self, chat_id, date):
+        query = """
+        SELECT sum(number * count), sum(count)
+        FROM user_daily_number_counts
+        WHERE chat_id = %s AND log_date = %s
+        """
+        result = self.db.fetch_one(query, (chat_id, date))
+        if result and result[1] and result[1] > 0:
+            return result[0] / result[1]
+        return None
