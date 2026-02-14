@@ -13,6 +13,9 @@ async def echo_handler(message, ctx):
 
 async def number_parser_handler(message, ctx):
     config = ctx['config']
+
+    if str(message.chat_id) not in config.tracked_chat_ids:
+        return
     
     regex_pattern = config.message_regex
     if not regex_pattern:

@@ -9,12 +9,12 @@ class MatchType(Enum):
 class MatchContext:
     def __init__(self):
         # Set of (MatchType, message_user_id, matched_user_id, matched_number, matched_message_id, reply_text)
-        self.matches = set()
+        self.matches = []
         # Set of MatchType
         self.types = set()
 
     def add_match(self, match_type, message_user_id, matched_user_id, matched_number, matched_message_id, reply_text):
-        self.matches.add((match_type, message_user_id, matched_user_id, matched_number, matched_message_id, reply_text))
+        self.matches.append((match_type, message_user_id, matched_user_id, matched_number, matched_message_id, reply_text))
         self.types.add(match_type)
 
     def has_conflict(self, match_type, message_user_id, matched_user_id):

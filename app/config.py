@@ -26,6 +26,14 @@ class Config:
         return self.data.get('developer_user_ids', [])
 
     @property
+    def tracked_chat_ids(self):
+        return self.data.get('tracked_chat_ids', [])
+
+    @property
     def hit_numbers(self):
         return self.data.get('hit_numbers', {})
+
+    @property
+    def forwarding_chat_ids(self):
+        return self.data.get('forwarding_chat_ids', {})
 

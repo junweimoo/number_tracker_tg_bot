@@ -79,13 +79,11 @@ class NumberLogService:
         # Initialize Hit Strategies from Config
         self.hit_strategies = []
         hit_numbers = self.config.hit_numbers
-        for number_str, details in hit_numbers.items():
+        for number_str, _ in hit_numbers.items():
             try:
                 target_number = int(number_str)
-                reply_text = details.get('reply')
-                reaction = details.get('reaction')
                 self.hit_strategies.append(
-                    HitSpecificNumberStrategy(target_number, reply_text, reaction, self.number_log_repo)
+                    HitSpecificNumberStrategy(target_number, self.number_log_repo, self.config)
                 )
             except ValueError:
                 logger.warning(f"Invalid hit number in config: {number_str}")
@@ -124,7 +122,7 @@ class NumberLogService:
             logger.error(f"Failed to precache user data: {e}")
 
     def _duplicate_check(self, message, number, ts):
-        if message.user_id in self.config.developer_user_ids:
+        if str(message.user_id) in self.config.developer_user_ids:
             return False
         user_log_cache_key = (message.user_id, message.chat_id)
         if user_log_cache_key in self.user_log_cache:
@@ -270,7 +268,8 @@ class NumberLogService:
             for strategy in self.hit_strategies:
                 result = strategy.check(message, number, cache_data)
                 if result:
-                    hit_context.add_hit(result.hit_type, result.hit_number, result.reply_text, result.react_emoji)
+                    hit_context.add_hit(result.hit_type, result.hit_number, result.reply_text,
+                                        result.react_emoji, result.forward_chat_ids)
                     logger.info(f"Hit detected! - User {message.user_id} in chat {message.chat_id}.")
             # ---
 
@@ -441,20 +440,24 @@ class NumberLogService:
 
             # --- Send Feedback (Reaction & Reply) ---
             if self.bot:
-                # Send hit replies
+                # Send last hit reaction
                 hit_reaction = None
                 for hit in hit_context.hits:
-                    _, _, _, current_reaction = hit
+                    _, _, _, current_reaction, _ = hit
                     if current_reaction:
                         hit_reaction = current_reaction
                 if hit_reaction:
                     await self.bot.set_message_reaction(message.chat_id, message.message_id, hit_reaction)
+
+                # Send hit replies
                 for hit in hit_context.hits:
-                    _, _, hit_reply_text, _ = hit
+                    _, _, hit_reply_text, _, forward_chat_ids = hit
                     if hit_reply_text:
                         await self.bot.send_reply(message.chat_id, message.message_id, hit_reply_text)
+                    for forward_chat_id in forward_chat_ids:
+                        await self.bot.forward_message(message.chat_id, message.message_id, forward_chat_id)
 
-                # Send specific match replies to the matched message IDs
+                # Send match replies to the matched message IDs
                 for match in match_context.matches:
                     _, _, _, _, matched_msg_id, match_reply_text = match
                     if matched_msg_id:

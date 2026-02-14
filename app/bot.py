@@ -143,3 +143,12 @@ class TelegramBot:
             'reaction': [{'type': 'emoji', 'emoji': emoji}]
         }
         await self._make_request('setMessageReaction', json_data=json_data)
+
+    async def forward_message(self, from_chat_id, message_id, to_chat_id):
+        """Forwards a message from one chat to another."""
+        params = {
+            'chat_id': to_chat_id,
+            'from_chat_id': from_chat_id,
+            'message_id': message_id
+        }
+        await self._make_request('forwardMessage', params)
