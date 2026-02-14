@@ -14,3 +14,13 @@ class NumberLogRepository:
         FROM number_logs
         WHERE user_id = %s AND chat_id = %s
         """
+
+    def get_recent_logs_for_number(self, chat_id, number, limit=3):
+        query = """
+        SELECT user_name, ts
+        FROM number_logs
+        WHERE chat_id = %s AND number = %s
+        ORDER BY ts DESC
+        LIMIT %s
+        """
+        return self.db.fetch_all(query, (chat_id, number, limit))

@@ -24,3 +24,8 @@ class Config:
     @property
     def developer_user_ids(self):
         return self.data.get('developer_user_ids', [])
+
+    @property
+    def hit_numbers(self):
+        return self.data.get('hit_numbers', {})
+

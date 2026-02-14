@@ -9,6 +9,7 @@ from service.matches import (
     SelfReverseNumberMatchStrategy,
     SumTargetMatchStrategy,
     SelfSumTargetMatchStrategy)
+from service.hits import HitContext, HitSpecificNumberStrategy, HitType
 
 logger = logging.getLogger(__name__)
 
@@ -63,6 +64,20 @@ class NumberLogService:
             SumTargetMatchStrategy(100),
             SelfSumTargetMatchStrategy(100),
         ]
+        
+        # Initialize Hit Strategies from Config
+        self.hit_strategies = []
+        hit_numbers = self.config.hit_numbers
+        for number_str, details in hit_numbers.items():
+            try:
+                target_number = int(number_str)
+                reply_text = details.get('reply')
+                reaction = details.get('reaction')
+                self.hit_strategies.append(
+                    HitSpecificNumberStrategy(target_number, reply_text, reaction, self.number_log_repo)
+                )
+            except ValueError:
+                logger.warning(f"Invalid hit number in config: {number_str}")
 
     def set_bot(self, bot):
         self.bot = bot
@@ -110,7 +125,6 @@ class NumberLogService:
             # Update User Info Cache (Before processing matches so we have current user info)
             self.user_info_cache[message.user_id] = UserInfo(user_name, message.username)
 
-            # --- Match Logic ---
             # Prepare Cache Data Object
             cache_data = CacheData(
                 self.user_info_cache,
@@ -118,6 +132,19 @@ class NumberLogService:
                 self.chat_log_cache
             )
 
+            # --- Hit Logic ---
+            hit_context = HitContext()
+            is_any_hit = False
+
+            for strategy in self.hit_strategies:
+                result = strategy.check(message, number, cache_data)
+                if result:
+                    hit_context.add_hit(result.hit_type, result.hit_number, result.reply_text, result.react_emoji)
+                    is_any_hit = True
+                    logger.info(f"Hit detected! - User {message.user_id} in chat {message.chat_id}.")
+            # ---
+
+            # --- Match Logic ---
             match_context = MatchContext()
             is_any_match = False
 
@@ -135,13 +162,13 @@ class NumberLogService:
                         result.reply_text
                     )
                     is_any_match = True
-                    logger.info(f"Match detected! {result.reply_text} - User {message.user_id} matched user {result.matched_user_id} in chat {message.chat_id}.")
+                    logger.info(f"Match detected! - User {message.user_id} matched user {result.matched_user_id} in chat {message.chat_id}.")
             # ---
 
             # --- Streak Logic ---
             chat_id = message.chat_id
             current_matches = len(match_context.matches)
-            current_hits = 0 # Placeholder for now
+            current_hits = len(hit_context.hits)
 
             if (current_matches + current_hits) > 0:
                 if chat_id not in self.streak_info_cache:
@@ -259,14 +286,18 @@ class NumberLogService:
 
             # Send Feedback (Reaction & Reply)
             if self.bot:
-                reaction = '🔥' if is_any_match else '👍'
-                await self.bot.set_message_reaction(message.chat_id, message.message_id, reaction)
-                
-                # Send generic detection reply
-                reply_template = self.config.reply_message
-                if reply_template:
-                    reply_text = reply_template.format(number=number)
-                    await self.bot.send_reply(message.chat_id, message.message_id, reply_text)
+                # Send hit replies
+                hit_reaction = None
+                for hit in hit_context.hits:
+                    _, _, _, current_reaction = hit
+                    if current_reaction:
+                        hit_reaction = current_reaction
+                if hit_reaction:
+                    await self.bot.set_message_reaction(message.chat_id, message.message_id, hit_reaction)
+                for hit in hit_context.hits:
+                    _, _, hit_reply_text, _ = hit
+                    if hit_reply_text:
+                        await self.bot.send_reply(message.chat_id, message.message_id, hit_reply_text)
                 
                 # Send specific match replies to the matched message IDs
                 for match in match_context.matches:
@@ -274,7 +305,7 @@ class NumberLogService:
                     if matched_msg_id:
                         await self.bot.send_reply(message.chat_id, matched_msg_id, match_reply_text)
                 
-                # Send Streak message if total >= 2
+                # Send streak message if total >= 2
                 if streak_total >= 2:
                     streak_msg = f"Streak: {streak_total}!"
                     await self.bot.send_message(message.chat_id, streak_msg)

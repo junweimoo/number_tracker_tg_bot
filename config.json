@@ -5,5 +5,9 @@
   "replies": {
     "reply_message": "I detected the number: {number}"
   },
-  "developer_user_ids": [1662984841]
+  "developer_user_ids": [1662984841],
+  "hit_numbers": {
+    "0": {"reply": "Hit 0!", "reaction": "\uD83C\uDF4C"},
+    "100": {"reply": "Hit 100!", "reaction": "\uD83D\uDCAF"}
+  }
 }
