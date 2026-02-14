@@ -42,6 +42,7 @@ class NumberLogService:
         self.attendance_repo = repositories['attendance']
         self.stats_repo = repositories['stats']
         self.match_log_repo = repositories['match_log']
+        self.user_repo = repositories['user']
 
         # Cache: user_id -> UserInfo
         self.user_info_cache = {}
@@ -82,7 +83,7 @@ class NumberLogService:
     def set_bot(self, bot):
         self.bot = bot
 
-    def duplicate_check(self, message, number, ts):
+    def _duplicate_check(self, message, number, ts):
         if message.user_id in self.config.developer_user_ids:
             return False
         user_log_cache_key = (message.user_id, message.chat_id)
@@ -98,6 +99,62 @@ class NumberLogService:
                     return True
         return False
 
+    async def _mark_user_attendance(self, message, today_date, yesterday_date):
+        """
+        Updates the user's streak and attendance if this is their first log of the day.
+        Sends a reply with the updated streak info.
+        """
+        # A. Update user_data
+        update_streak_query = self.user_repo.get_update_streak_query()
+        streak_params = (
+            message.user_id,
+            message.chat_id,
+            today_date,
+            today_date,
+            yesterday_date,
+            today_date
+        )
+
+        # B. Insert into user_attendance (idempotent)
+        insert_attendance_query = self.attendance_repo.get_insert_query()
+        attendance_params = (
+            message.user_id,
+            message.chat_id,
+            today_date
+        )
+
+        try:
+            # Execute streak update and attendance insert in a single transaction
+            self.db.execute_transaction([
+                (update_streak_query, streak_params),
+                (insert_attendance_query, attendance_params)
+            ])
+            
+            # Fetch updated streak and attendance history for reply
+            # We need to fetch the current streak from user_data
+            streak_query = self.user_repo.get_fetch_streak_query()
+            streak_result = self.db.fetch_one(streak_query, (message.user_id, message.chat_id))
+            current_user_streak = streak_result[0] if streak_result else 0
+            
+            # Fetch last 7 days attendance
+            attendance_rows = self.attendance_repo.get_recent_attendance(message.user_id, message.chat_id, limit=7)
+            attendance_dates = [row[0] for row in attendance_rows]
+            
+            # Format attendance string
+            attendance_str = ""
+            for i in range(6, -1, -1):
+                check_date = today_date - timedelta(days=i)
+                if check_date in attendance_dates:
+                    attendance_str += "✅ "
+                else:
+                    attendance_str += "⬜ "
+            
+            streak_reply = f"Your Streak: {current_user_streak} days 🔥\n{attendance_str}"
+            await self.bot.send_reply(message.chat_id, message.message_id, streak_reply)
+
+        except Exception as e:
+            logger.error(f"Failed to update user streak/attendance: {e}")
+
     async def process_number(self, message, number):
         try:
             # Timestamp Calculation
@@ -107,13 +164,14 @@ class NumberLogService:
                 ts = datetime.now(timezone.utc)
 
             # Duplicate Check (Debounce)
-            if self.duplicate_check(message, number, ts):
+            if self._duplicate_check(message, number, ts):
                 return
 
             # Calculate Singapore Time (GMT+8) for attendance
             sgt_timezone = timezone(timedelta(hours=8))
             ts_sgt = ts.astimezone(sgt_timezone)
             today_date = ts_sgt.date()
+            yesterday_date = today_date - timedelta(days=1)
 
             # User Name Logic
             user_name = message.first_name
@@ -173,13 +231,36 @@ class NumberLogService:
             if (current_matches + current_hits) > 0:
                 if chat_id not in self.streak_info_cache:
                     self.streak_info_cache[chat_id] = StreakInfo()
-                
                 self.streak_info_cache[chat_id].matches += current_matches
                 self.streak_info_cache[chat_id].hits += current_hits
             else:
                 self.streak_info_cache[chat_id] = StreakInfo(0, 0)
 
             streak_total = self.streak_info_cache[chat_id].total
+            # ---
+
+            # --- Update User Streak ---
+            user_log_cache_key = (message.user_id, message.chat_id)
+            last_login_date = None
+            if user_log_cache_key in self.user_log_cache:
+                history = self.user_log_cache[user_log_cache_key]
+                if history:
+                    _, last_ts, _ = history[-1]
+                    last_ts_sgt = last_ts.astimezone(sgt_timezone)
+                    last_login_date = last_ts_sgt.date()
+            
+            should_mark_attendance = False
+            if last_login_date == today_date:
+                should_mark_attendance = False
+            else:
+                last_login_query = self.user_repo.get_last_login_date_query()
+                last_login_result = self.db.fetch_one(last_login_query, (message.user_id, message.chat_id))
+                db_last_login_date = last_login_result[0] if last_login_result else None
+                if db_last_login_date != today_date:
+                    should_mark_attendance = True
+
+            if should_mark_attendance:
+                await self._mark_user_attendance(message, today_date, yesterday_date)
             # ---
 
             # --- Transaction Logic ---
@@ -196,15 +277,6 @@ class NumberLogService:
                 number
             )
             transaction_queries.append((insert_log_query, log_params))
-
-            # B. Insert into user_attendance (idempotent)
-            insert_attendance_query = self.attendance_repo.get_insert_query()
-            attendance_params = (
-                message.user_id,
-                message.chat_id,
-                today_date
-            )
-            transaction_queries.append((insert_attendance_query, attendance_params))
 
             # C. Upsert into user_number_counts
             upsert_counts_query = self.stats_repo.get_upsert_counts_query()
@@ -235,7 +307,7 @@ class NumberLogService:
 
                     user1_info = self.user_info_cache.get(msg_user_id)
                     user1_name = user1_info.fullname if user1_info else "Unknown"
-                    
+
                     user2_info = self.user_info_cache.get(matched_user_id)
                     user2_name = user2_info.fullname if user2_info else "Unknown"
 
@@ -298,14 +370,14 @@ class NumberLogService:
                     _, _, hit_reply_text, _ = hit
                     if hit_reply_text:
                         await self.bot.send_reply(message.chat_id, message.message_id, hit_reply_text)
-                
+
                 # Send specific match replies to the matched message IDs
                 for match in match_context.matches:
                     _, _, _, _, matched_msg_id, match_reply_text = match
                     if matched_msg_id:
                         await self.bot.send_reply(message.chat_id, matched_msg_id, match_reply_text)
-                
-                # Send streak message if total >= 2
+
+                # Send Streak message if total >= 2
                 if streak_total >= 2:
                     streak_msg = f"Streak: {streak_total}!"
                     await self.bot.send_message(message.chat_id, streak_msg)

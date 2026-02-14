@@ -109,14 +109,17 @@ class SchemaManager:
         create_table_query = """
         CREATE TABLE IF NOT EXISTS user_data 
         (
-            id             SERIAL       PRIMARY KEY,
-            chat_id        BIGINT       NOT NULL,
-            thread_id      BIGINT,
-            user_id        BIGINT       NOT NULL,
-            user_name      TEXT         NOT NULL,
-            user_handle    TEXT,
-            numbers_bitmap bit(128)     DEFAULT repeat('0', 128)::bit(128),
-            extend_info    TEXT
+            id              SERIAL       PRIMARY KEY,
+            chat_id         BIGINT       NOT NULL,
+            thread_id       BIGINT,
+            user_id         BIGINT       NOT NULL,
+            user_name       TEXT         NOT NULL,
+            user_handle     TEXT,
+            numbers_bitmap  bit(128)     DEFAULT repeat('0', 128)::bit(128),
+            last_login_date DATE         DEFAULT CURRENT_DATE,
+            current_streak  INT          DEFAULT 0,
+            extend_info     TEXT,
+            CONSTRAINT uq_user_chat UNIQUE (user_id, chat_id)
         );
         """
         self.db.execute_query(create_table_query)

@@ -11,6 +11,7 @@ from repository.number_log_repository import NumberLogRepository
 from repository.attendance_repository import AttendanceRepository
 from repository.stats_repository import StatsRepository
 from repository.match_log_repository import MatchLogRepository
+from repository.user_repository import UserRepository
 
 if __name__ == '__main__':
     # Initialize env variables
@@ -40,7 +41,8 @@ if __name__ == '__main__':
         'number_log': NumberLogRepository(db),
         'attendance': AttendanceRepository(db),
         'stats': StatsRepository(db),
-        'match_log': MatchLogRepository(db)
+        'match_log': MatchLogRepository(db),
+        'user': UserRepository(db)
     }
 
     # Initialize Services
