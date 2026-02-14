@@ -9,6 +9,9 @@ class UserRepository:
         - If last_login_date is today: do nothing (keep streak same)
         - If last_login_date is yesterday: increment streak, update date
         - If last_login_date is older (or null): reset streak to 1, update date
+        
+        Expected Params Order: 
+        [user_id, chat_id, today_date, today_date, yesterday_date, today_date]
         """
         return """
         INSERT INTO user_data (user_id, chat_id, current_streak, last_login_date, user_name)
@@ -42,4 +45,12 @@ class UserRepository:
         SET 
             user_name = EXCLUDED.user_name,
             numbers_bitmap = set_bit(user_data.numbers_bitmap, %s, 1)
+        """
+
+    def get_all_users_query(self):
+        return """
+        SELECT 
+            id, chat_id, thread_id, user_id, user_name, user_handle, 
+            numbers_bitmap, last_login_date, current_streak, extend_info 
+        FROM user_data
         """

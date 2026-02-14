@@ -9,7 +9,7 @@ from service.matches import (
     SelfReverseNumberMatchStrategy,
     SumTargetMatchStrategy,
     SelfSumTargetMatchStrategy)
-from service.hits import HitContext, HitSpecificNumberStrategy, HitType
+from service.hits import HitContext, HitSpecificNumberStrategy
 
 logger = logging.getLogger(__name__)
 
@@ -23,9 +23,17 @@ class StreakInfo:
         return self.matches + self.hits
 
 class UserInfo:
-    def __init__(self, fullname, handle):
-        self.fullname = fullname
-        self.handle = handle
+    def __init__(self, chat_id, thread_id, user_id, user_name, user_handle, numbers_bitmap=0,
+                 last_login_date=None, current_streak=0, extend_info=None):
+        self.chat_id = chat_id
+        self.thread_id = thread_id
+        self.user_id = user_id
+        self.user_name = user_name
+        self.user_handle = user_handle
+        self.numbers_bitmap = numbers_bitmap
+        self.last_login_date = last_login_date
+        self.current_streak = current_streak
+        self.extend_info = extend_info
 
 class CacheData:
     def __init__(self, user_info_cache, user_log_cache, chat_log_cache):
@@ -34,7 +42,7 @@ class CacheData:
         self.chat_log_cache = chat_log_cache
 
 class NumberLogService:
-    def __init__(self, db, config, repositories, transaction_queue, bot=None):
+    def __init__(self, db, config, repositories, transaction_queue=None, bot=None):
         self.db = db
         self.config = config
         self.bot = bot
@@ -43,10 +51,10 @@ class NumberLogService:
         self.stats_repo = repositories['stats']
         self.match_log_repo = repositories['match_log']
         self.user_repo = repositories['user']
-
+        
         self.transaction_queue = transaction_queue
 
-        # Cache: user_id -> UserInfo
+        # Cache: (user_id, chat_id) -> UserInfo
         self.user_info_cache = {}
         
         # Cache: (user_id, chat_id) -> deque of (number, timestamp, message_id), max length = 10
@@ -82,8 +90,38 @@ class NumberLogService:
             except ValueError:
                 logger.warning(f"Invalid hit number in config: {number_str}")
 
+        # Precache user data from database
+        self._precache_user_data()
+
     def set_bot(self, bot):
         self.bot = bot
+
+    def _precache_user_data(self):
+        """Pre-caches user info from the database."""
+        try:
+            query = self.user_repo.get_all_users_query()
+            users = self.db.fetch_all(query)
+            if users:
+                for user in users:
+                    # Unpack all columns
+                    _, chat_id, thread_id, user_id, user_name, user_handle, numbers_bitmap, last_login_date, current_streak, extend_info = user
+                    
+                    # Convert numbers_bitmap to int
+                    if isinstance(numbers_bitmap, str):
+                        try:
+                            numbers_bitmap = int(numbers_bitmap, 2)
+                        except ValueError:
+                            numbers_bitmap = 0
+                    elif not isinstance(numbers_bitmap, int):
+                        numbers_bitmap = 0
+
+                    self.user_info_cache[(user_id, chat_id)] = UserInfo(
+                        chat_id, thread_id, user_id, user_name, user_handle,
+                        numbers_bitmap, last_login_date, current_streak, extend_info
+                    )
+                logger.info(f"Pre-cached {len(users)} users.")
+        except Exception as e:
+            logger.error(f"Failed to precache user data: {e}")
 
     def _duplicate_check(self, message, number, ts):
         if message.user_id in self.config.developer_user_ids:
@@ -106,7 +144,7 @@ class NumberLogService:
         Updates the user's streak and attendance if this is their first log of the day.
         Sends a reply with the updated streak info.
         """
-        # A. Update user_data
+        # A. Update user_data (idempotent)
         update_streak_query = self.user_repo.get_update_streak_query()
         streak_params = (
             message.user_id,
@@ -157,6 +195,37 @@ class NumberLogService:
         except Exception as e:
             logger.error(f"Failed to update user streak/attendance: {e}")
 
+    def _update_user_info_cache(self, message, user_name):
+        user_info_cache_key = (message.user_id, message.chat_id)
+        if user_info_cache_key in self.user_info_cache:
+            user_info = self.user_info_cache[user_info_cache_key]
+            user_info.user_name = user_name
+            user_info.user_handle = message.username
+        else:
+            self.user_info_cache[user_info_cache_key] = UserInfo(
+                message.chat_id,
+                message.thread_id,
+                message.user_id,
+                user_name,
+                message.username
+            )
+
+    def _update_user_bitmap_cache(self, message, number):
+        user_info_cache_key = (message.user_id, message.chat_id)
+        numbers_bitmap = self.user_info_cache[user_info_cache_key].numbers_bitmap
+        current_mask = (1 << (127 - number))
+        if not numbers_bitmap & current_mask:
+            numbers_bitmap |= current_mask
+            self.user_info_cache[user_info_cache_key].numbers_bitmap = numbers_bitmap
+            mask = 1 << 127
+            missing_numbers = []
+            for i in range(101):
+                if not mask & numbers_bitmap:
+                    missing_numbers.append(i)
+                mask >>= 1
+            return missing_numbers
+        return None
+
     async def process_number(self, message, number):
         try:
             # Timestamp Calculation
@@ -182,8 +251,11 @@ class NumberLogService:
             if not user_name:
                 user_name = "Unknown"
 
-            # Update User Info Cache (Before processing matches so we have current user info)
-            self.user_info_cache[message.user_id] = UserInfo(user_name, message.username)
+            # Update User Info Cache name and handle
+            self._update_user_info_cache(message, user_name)
+
+            # Update User Info Cache numbers bitmap
+            remaining_numbers = self._update_user_bitmap_cache(message, number)
 
             # Prepare Cache Data Object
             cache_data = CacheData(
@@ -194,13 +266,11 @@ class NumberLogService:
 
             # --- Hit Logic ---
             hit_context = HitContext()
-            is_any_hit = False
 
             for strategy in self.hit_strategies:
                 result = strategy.check(message, number, cache_data)
                 if result:
                     hit_context.add_hit(result.hit_type, result.hit_number, result.reply_text, result.react_emoji)
-                    is_any_hit = True
                     logger.info(f"Hit detected! - User {message.user_id} in chat {message.chat_id}.")
             # ---
 
@@ -222,7 +292,8 @@ class NumberLogService:
                         result.reply_text
                     )
                     is_any_match = True
-                    logger.info(f"Match detected! - User {message.user_id} matched user {result.matched_user_id} in chat {message.chat_id}.")
+                    logger.info(f"Match detected! - User {message.user_id} matched user "
+                                f"{result.matched_user_id} in chat {message.chat_id}.")
             # ---
 
             # --- Streak Logic ---
@@ -241,15 +312,9 @@ class NumberLogService:
             streak_total = self.streak_info_cache[chat_id].total
             # ---
 
-            # --- Update User Streak ---
-            user_log_cache_key = (message.user_id, message.chat_id)
-            last_login_date = None
-            if user_log_cache_key in self.user_log_cache:
-                history = self.user_log_cache[user_log_cache_key]
-                if history:
-                    _, last_ts, _ = history[-1]
-                    last_ts_sgt = last_ts.astimezone(sgt_timezone)
-                    last_login_date = last_ts_sgt.date()
+            # --- Update User Attendance ---
+            user_info = self.user_info_cache[(message.user_id, message.chat_id)]
+            last_login_date = user_info.last_login_date
 
             should_mark_attendance = False
             if last_login_date == today_date:
@@ -263,6 +328,7 @@ class NumberLogService:
 
             if should_mark_attendance:
                 await self._mark_user_attendance(message, today_date, yesterday_date)
+                user_info.last_login_date = today_date
             # ---
 
             # --- Transaction Logic ---
@@ -307,11 +373,11 @@ class NumberLogService:
                 for match in match_context.matches:
                     match_type, msg_user_id, matched_user_id, matched_number, matched_msg_id, _ = match
 
-                    user1_info = self.user_info_cache.get(msg_user_id)
-                    user1_name = user1_info.fullname if user1_info else "Unknown"
+                    user1_info = self.user_info_cache.get((msg_user_id, message.chat_id))
+                    user1_name = user1_info.user_name if user1_info else "Unknown"
 
-                    user2_info = self.user_info_cache.get(matched_user_id)
-                    user2_name = user2_info.fullname if user2_info else "Unknown"
+                    user2_info = self.user_info_cache.get((matched_user_id, message.chat_id))
+                    user2_name = user2_info.user_name if user2_info else "Unknown"
 
                     # Log the match
                     match_params = (
@@ -370,9 +436,10 @@ class NumberLogService:
             self.chat_log_cache[chat_log_cache_key].append((message.user_id, number, ts, message.message_id))
             # ---
 
+            # Log Success
             logger.info(f"Logged number {number}, attendance, and count for user {message.user_id}.")
 
-            # Send Feedback (Reaction & Reply)
+            # --- Send Feedback (Reaction & Reply) ---
             if self.bot:
                 # Send hit replies
                 hit_reaction = None
@@ -393,11 +460,19 @@ class NumberLogService:
                     if matched_msg_id:
                         await self.bot.send_reply(message.chat_id, matched_msg_id, match_reply_text)
 
+            # Send numbers obtained message if new number
+            if remaining_numbers:
+                remaining_numbers_reply = (f"New number! {len(remaining_numbers)} "
+                                           f"number{'s' if len(remaining_numbers) > 1 else ''} left to collect")
+                if len(remaining_numbers) < 10:
+                    remaining_numbers_reply += f": {', '.join(map(str, remaining_numbers))}"
+                await self.bot.send_reply(message.chat_id, message.message_id, remaining_numbers_reply)
+
             # Send Streak message if total >= 2
             if streak_total >= 2:
                 streak_msg = f"Streak: {streak_total}!"
                 await self.bot.send_message(message.chat_id, streak_msg)
-        # ---
+            # ---
 
         except Exception as e:
-            logger.error(f"Failed to process number log: {e}", exc_info=True)
+            logger.error(f"Failed to process number log: {e}")
