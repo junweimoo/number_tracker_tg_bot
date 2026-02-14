@@ -12,8 +12,9 @@ from repository.attendance_repository import AttendanceRepository
 from repository.stats_repository import StatsRepository
 from repository.match_log_repository import MatchLogRepository
 from repository.user_repository import UserRepository
+from utils.transaction_queue import TransactionQueue
 
-if __name__ == '__main__':
+async def main():
     # Initialize env variables
     TOKEN = os.environ.get("BOT_TOKEN")
     if not TOKEN:
@@ -36,6 +37,10 @@ if __name__ == '__main__':
         print(f"Error initializing database: {e}")
         exit(1)
 
+    # Initialize Transaction Queue
+    transaction_queue = TransactionQueue(db)
+    transaction_queue.start_worker()
+
     # Initialize Repositories
     repositories = {
         'number_log': NumberLogRepository(db),
@@ -46,7 +51,7 @@ if __name__ == '__main__':
     }
 
     # Initialize Services
-    number_log_service = NumberLogService(db, config, repositories)
+    number_log_service = NumberLogService(db, config, repositories, transaction_queue)
     stats_view_service = StatsViewService(db, config, repositories)
 
     context = {
@@ -67,10 +72,16 @@ if __name__ == '__main__':
 
     bot.register_message_handler(number_parser_handler)
 
-    # Start the bot
     try:
-        asyncio.run(bot.start_polling())
-    except KeyboardInterrupt:
+        await bot.start_polling()
+    except asyncio.CancelledError:
         print("Bot stopped.")
     finally:
+        await transaction_queue.stop_worker()
         db.close_all_connections()
+
+if __name__ == '__main__':
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        pass

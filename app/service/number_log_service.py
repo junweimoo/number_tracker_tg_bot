@@ -34,7 +34,7 @@ class CacheData:
         self.chat_log_cache = chat_log_cache
 
 class NumberLogService:
-    def __init__(self, db, config, repositories, bot=None):
+    def __init__(self, db, config, repositories, transaction_queue, bot=None):
         self.db = db
         self.config = config
         self.bot = bot
@@ -43,6 +43,8 @@ class NumberLogService:
         self.stats_repo = repositories['stats']
         self.match_log_repo = repositories['match_log']
         self.user_repo = repositories['user']
+
+        self.transaction_queue = transaction_queue
 
         # Cache: user_id -> UserInfo
         self.user_info_cache = {}
@@ -348,7 +350,10 @@ class NumberLogService:
             transaction_queries.append((upsert_bitmap_query, bitmap_params))
 
             # Execute Transaction
-            self.db.execute_transaction(transaction_queries)
+            if self.transaction_queue:
+                await self.transaction_queue.submit(transaction_queries)
+            else:
+                self.db.execute_transaction(transaction_queries)
             # ---
 
             # --- Update Caches ---
@@ -388,11 +393,11 @@ class NumberLogService:
                     if matched_msg_id:
                         await self.bot.send_reply(message.chat_id, matched_msg_id, match_reply_text)
 
-                # Send Streak message if total >= 2
-                if streak_total >= 2:
-                    streak_msg = f"Streak: {streak_total}!"
-                    await self.bot.send_message(message.chat_id, streak_msg)
-            # ---
+            # Send Streak message if total >= 2
+            if streak_total >= 2:
+                streak_msg = f"Streak: {streak_total}!"
+                await self.bot.send_message(message.chat_id, streak_msg)
+        # ---
 
         except Exception as e:
             logger.error(f"Failed to process number log: {e}", exc_info=True)
