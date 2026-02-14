@@ -1,1 +1,7 @@
 psycopg2-binary
+matplotlib
+requests
+plotly
+networkx
+Pillow
+tabulate

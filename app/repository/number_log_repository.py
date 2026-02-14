@@ -24,3 +24,23 @@ class NumberLogRepository:
         LIMIT %s
         """
         return self.db.fetch_all(query, (chat_id, number, limit))
+
+    def get_hourly_counts(self, chat_id, start_time, user_id=None):
+        if user_id:
+            query = """
+            SELECT time_bucket('1 hour', ts) AS bucket, count(*)
+            FROM number_logs
+            WHERE chat_id = %s AND user_id = %s AND ts >= %s
+            GROUP BY bucket
+            ORDER BY bucket
+            """
+            return self.db.fetch_all(query, (chat_id, user_id, start_time))
+        else:
+            query = """
+            SELECT time_bucket('1 hour', ts) AS bucket, count(*)
+            FROM number_logs
+            WHERE chat_id = %s AND ts >= %s
+            GROUP BY bucket
+            ORDER BY bucket
+            """
+            return self.db.fetch_all(query, (chat_id, start_time))

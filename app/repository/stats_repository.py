@@ -96,3 +96,62 @@ class StatsRepository:
         LIMIT 1
         """
         return self.db.fetch_one(query, (chat_id, number, date))
+
+    def get_all_number_counts(self, chat_id, user_id=None):
+        if user_id:
+            query = """
+            SELECT number, count
+            FROM user_number_counts
+            WHERE chat_id = %s AND user_id = %s
+            ORDER BY number
+            """
+            return self.db.fetch_all(query, (chat_id, user_id))
+        else:
+            query = """
+            SELECT number, sum(count)
+            FROM user_number_counts
+            WHERE chat_id = %s
+            GROUP BY number
+            ORDER BY number
+            """
+            return self.db.fetch_all(query, (chat_id,))
+
+    def get_number_counts_since(self, chat_id, start_date, user_id=None):
+        if user_id:
+            query = """
+            SELECT number, sum(count)
+            FROM user_daily_number_counts
+            WHERE chat_id = %s AND user_id = %s AND log_date >= %s
+            GROUP BY number
+            ORDER BY number
+            """
+            return self.db.fetch_all(query, (chat_id, user_id, start_date))
+        else:
+            query = """
+            SELECT number, sum(count)
+            FROM user_daily_number_counts
+            WHERE chat_id = %s AND log_date >= %s
+            GROUP BY number
+            ORDER BY number
+            """
+            return self.db.fetch_all(query, (chat_id, start_date))
+
+    def get_daily_counts(self, chat_id, start_date, user_id=None):
+        if user_id:
+            query = """
+            SELECT log_date, sum(count)
+            FROM user_daily_number_counts
+            WHERE chat_id = %s AND user_id = %s AND log_date >= %s
+            GROUP BY log_date
+            ORDER BY log_date
+            """
+            return self.db.fetch_all(query, (chat_id, user_id, start_date))
+        else:
+            query = """
+            SELECT log_date, sum(count)
+            FROM user_daily_number_counts
+            WHERE chat_id = %s AND log_date >= %s
+            GROUP BY log_date
+            ORDER BY log_date
+            """
+            return self.db.fetch_all(query, (chat_id, start_date))

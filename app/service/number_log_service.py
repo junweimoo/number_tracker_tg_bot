@@ -237,7 +237,7 @@ class NumberLogService:
                 return
 
             # Calculate Singapore Time (GMT+8) for attendance
-            sgt_timezone = timezone(timedelta(hours=8))
+            sgt_timezone = timezone(timedelta(hours=self.config.timezone_gmt))
             ts_sgt = ts.astimezone(sgt_timezone)
             today_date = ts_sgt.date()
             yesterday_date = today_date - timedelta(days=1)

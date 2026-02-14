@@ -64,3 +64,34 @@ async def leaderboard_handler(message, ctx):
         response = await service.get_leaderboard(message.chat_id)
 
     await bot.send_message(message.chat_id, response)
+
+async def visualize_num_counts_handler(message, ctx):
+    bot = ctx['bot']
+    service = ctx['visualization_service']
+
+    lock_mgr = ctx['lock_manager']
+    lock = await lock_mgr.get_lock(message.chat_id)
+
+    async with lock:
+        image_buf = service.generate_number_count_visualization(message.chat_id)
+    
+    if image_buf:
+        await bot.send_photo(message.chat_id, image_buf, caption="Number Frequency Visualization")
+    else:
+        await bot.send_message(message.chat_id, "No data available for visualization.")
+
+
+async def visualize_time_series_handler(message, ctx):
+    bot = ctx['bot']
+    service = ctx['visualization_service']
+
+    lock_mgr = ctx['lock_manager']
+    lock = await lock_mgr.get_lock(message.chat_id)
+
+    async with lock:
+        image_buf = service.generate_time_series_visualization(message.chat_id)
+
+    if image_buf:
+        await bot.send_photo(message.chat_id, image_buf, caption="Time Series Visualization")
+    else:
+        await bot.send_message(message.chat_id, "No data available for visualization.")

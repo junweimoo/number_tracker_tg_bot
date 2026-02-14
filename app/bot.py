@@ -4,6 +4,7 @@ import logging
 import urllib.request
 import urllib.parse
 import time
+import requests
 from concurrent.futures import ThreadPoolExecutor
 from utils.lock_manager import ChatLockManager
 
@@ -159,3 +160,15 @@ class TelegramBot:
             'message_id': message_id
         }
         await self._make_request('forwardMessage', params)
+
+    async def send_photo(self, chat_id, photo_buffer, caption=None):
+        """Sends a photo to a chat."""
+        url = self.base_url + 'sendPhoto'
+        data = {'chat_id': str(chat_id)}
+        if caption:
+            data['caption'] = caption
+        
+        files = {'photo': ('chart.png', photo_buffer, 'image/png')}
+        
+        loop = asyncio.get_running_loop()
+        await loop.run_in_executor(self.executor, lambda: requests.post(url, data=data, files=files))

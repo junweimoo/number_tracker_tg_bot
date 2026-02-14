@@ -6,9 +6,11 @@ from config import Config
 from database.database_core import Database
 from database.database_schema import SchemaManager
 from handlers import (
-    leaderboard_handler, start_handler, echo_handler, number_parser_handler, stats_handler, leaderboard_handler)
+    leaderboard_handler, start_handler, echo_handler, number_parser_handler, stats_handler,
+    visualize_time_series_handler, visualize_num_counts_handler)
 from service.number_log_service import NumberLogService
 from service.stats_view_service import StatsViewService
+from service.visualization_service import VisualizationService
 from repository.number_log_repository import NumberLogRepository
 from repository.attendance_repository import AttendanceRepository
 from repository.stats_repository import StatsRepository
@@ -58,6 +60,7 @@ async def main():
     # Initialize Services
     number_log_service = NumberLogService(db, config, repositories, transaction_queue)
     stats_view_service = StatsViewService(db, config, repositories)
+    visualization_service = VisualizationService(db, config, repositories)
 
     # Initialize Scheduler
     scheduler = Scheduler()
@@ -68,16 +71,20 @@ async def main():
         'db': db,
         'number_log_service': number_log_service,
         'stats_view_service': stats_view_service,
+        'visualization_service': visualization_service,
         'scheduler': scheduler
     }
     bot = TelegramBot(TOKEN, context=context)
     number_log_service.set_bot(bot)
     stats_view_service.set_bot(bot)
+    visualization_service.set_bot(bot)
 
     # Register Handlers
     bot.register_command_handler('/start', start_handler)
     bot.register_command_handler('/stats', stats_handler)
     bot.register_command_handler('/leaderboard', leaderboard_handler)
+    bot.register_command_handler('/vizcounts', visualize_num_counts_handler)
+    bot.register_command_handler('/viztimeseries', visualize_time_series_handler)
     bot.register_message_handler(number_parser_handler)
 
     # Register Tasks
