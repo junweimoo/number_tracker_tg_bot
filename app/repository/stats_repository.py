@@ -36,3 +36,63 @@ class StatsRepository:
         if result and result[1] and result[1] > 0:
             return result[0] / result[1]
         return None
+
+    def get_specific_number_counts(self, user_id, chat_id, numbers):
+        query = """
+        SELECT number, count
+        FROM user_number_counts
+        WHERE user_id = %s AND chat_id = %s AND number = ANY(%s)
+        """
+        return self.db.fetch_all(query, (user_id, chat_id, numbers))
+
+    def get_most_frequent_number(self, user_id, chat_id):
+        query = """
+        SELECT number, count
+        FROM user_number_counts
+        WHERE user_id = %s AND chat_id = %s
+        ORDER BY count DESC
+        LIMIT 1
+        """
+        return self.db.fetch_one(query, (user_id, chat_id))
+
+    def get_top_users_by_count(self, chat_id, limit=3):
+        query = """
+        SELECT user_id, sum(count) as total_count
+        FROM user_number_counts
+        WHERE chat_id = %s
+        GROUP BY user_id
+        ORDER BY total_count DESC
+        LIMIT %s
+        """
+        return self.db.fetch_all(query, (chat_id, limit))
+
+    def get_top_users_by_count_daily(self, chat_id, date, limit=3):
+        query = """
+        SELECT user_id, sum(count) as total_count
+        FROM user_daily_number_counts
+        WHERE chat_id = %s AND log_date = %s
+        GROUP BY user_id
+        ORDER BY total_count DESC
+        LIMIT %s
+        """
+        return self.db.fetch_all(query, (chat_id, date, limit))
+
+    def get_top_user_for_number(self, chat_id, number):
+        query = """
+        SELECT user_id, count
+        FROM user_number_counts
+        WHERE chat_id = %s AND number = %s
+        ORDER BY count DESC
+        LIMIT 1
+        """
+        return self.db.fetch_one(query, (chat_id, number))
+
+    def get_top_user_for_number_daily(self, chat_id, number, date):
+        query = """
+        SELECT user_id, count
+        FROM user_daily_number_counts
+        WHERE chat_id = %s AND number = %s AND log_date = %s
+        ORDER BY count DESC
+        LIMIT 1
+        """
+        return self.db.fetch_one(query, (chat_id, number, date))

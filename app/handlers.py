@@ -48,6 +48,19 @@ async def stats_handler(message, ctx):
     lock = await lock_mgr.get_lock(message.chat_id)
 
     async with lock:
-        response = await service.get_stats_summary(message)
+        response = await service.get_user_stats_summary(message)
     
+    await bot.send_message(message.chat_id, response)
+
+async def leaderboard_handler(message, ctx):
+    bot = ctx['bot']
+
+    service = ctx['stats_view_service']
+
+    lock_mgr = ctx['lock_manager']
+    lock = await lock_mgr.get_lock(message.chat_id)
+
+    async with lock:
+        response = await service.get_leaderboard(message.chat_id)
+
     await bot.send_message(message.chat_id, response)

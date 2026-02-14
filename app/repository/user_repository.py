@@ -54,3 +54,8 @@ class UserRepository:
             numbers_bitmap, last_login_date, current_streak, extend_info 
         FROM user_data
         """
+
+    def get_user_name(self, user_id, chat_id):
+        query = "SELECT user_name FROM user_data WHERE user_id = %s AND chat_id = %s"
+        result = self.db.fetch_one(query, (user_id, chat_id))
+        return result[0] if result else "Unknown"

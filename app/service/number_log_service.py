@@ -372,10 +372,14 @@ class NumberLogService:
                 for match in match_context.matches:
                     match_type, msg_user_id, matched_user_id, matched_number, matched_msg_id, _ = match
 
-                    user1_info = self.user_info_cache.get((msg_user_id, message.chat_id))
+                    smaller_user_id, bigger_user_id = (msg_user_id, matched_user_id) \
+                        if msg_user_id < matched_user_id \
+                        else (matched_user_id, msg_user_id)
+
+                    user1_info = self.user_info_cache.get((smaller_user_id, message.chat_id))
                     user1_name = user1_info.user_name if user1_info else "Unknown"
 
-                    user2_info = self.user_info_cache.get((matched_user_id, message.chat_id))
+                    user2_info = self.user_info_cache.get((bigger_user_id, message.chat_id))
                     user2_name = user2_info.user_name if user2_info else "Unknown"
 
                     # Log the match
@@ -478,4 +482,4 @@ class NumberLogService:
             # ---
 
         except Exception as e:
-            logger.error(f"Failed to process number log: {e}")
+            logger.error(f"Failed to process number log: {e}", exc_info=True)

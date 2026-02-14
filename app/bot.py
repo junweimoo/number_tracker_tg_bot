@@ -3,6 +3,7 @@ import json
 import logging
 import urllib.request
 import urllib.parse
+import time
 from concurrent.futures import ThreadPoolExecutor
 from utils.lock_manager import ChatLockManager
 
@@ -88,8 +89,8 @@ class TelegramBot:
                 updates = await self._make_request('getUpdates', {'offset': self.offset, 'timeout': 30})
                 if updates.get('ok'):
                     for update in updates['result']:
-                        self.offset = update['update_id'] + 1
                         asyncio.create_task(self._dispatch(update))
+                        self.offset = update['update_id'] + 1
             except Exception as e:
                 logger.error(f"Error polling: {e}")
                 await asyncio.sleep(5)
@@ -107,18 +108,24 @@ class TelegramBot:
                     f"text='{message.text}'")
 
         text = message.text
-        
+
         if text.startswith('/'):
             command = text.split()[0]
             if command in self.command_handlers:
                 try:
+                    start_time = time.perf_counter()
                     await self.command_handlers[command](message, self.context)
+                    duration = time.perf_counter() - start_time
+                    logger.info(f"Handler {self.command_handlers[command].__name__} - execution took {duration:.6f} seconds.")
                 except Exception as e:
                     logger.error(f"Error in command handler '{command}': {e}", exc_info=True)
         else:
             for handler in self.message_handlers:
                 try:
+                    start_time = time.perf_counter()
                     await handler(message, self.context)
+                    duration = time.perf_counter() - start_time
+                    logger.info(f"Handler {handler.__name__} - execution took {duration:.6f} seconds.")
                 except Exception as e:
                     logger.error(f"Error in message handler: {e}", exc_info=True)
 

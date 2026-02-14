@@ -180,7 +180,7 @@ class SchemaManager:
         self.db.execute_query(create_table_query)
 
         self.db.execute_query("""
-            CREATE INDEX IF NOT EXISTS idx_user_daily_counts_user_chat ON user_daily_number_counts (user_id, chat_id);
+            CREATE INDEX IF NOT EXISTS idx_user_daily_counts_user_chat_date ON user_daily_number_counts (user_id, chat_id, log_date);
         """)
         logger.info("Table 'user_daily_number_counts' initialized.")
 

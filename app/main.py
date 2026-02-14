@@ -5,7 +5,8 @@ from bot import TelegramBot
 from config import Config
 from database.database_core import Database
 from database.database_schema import SchemaManager
-from handlers import start_handler, echo_handler, number_parser_handler, stats_handler
+from handlers import (
+    leaderboard_handler, start_handler, echo_handler, number_parser_handler, stats_handler, leaderboard_handler)
 from service.number_log_service import NumberLogService
 from service.stats_view_service import StatsViewService
 from repository.number_log_repository import NumberLogRepository
@@ -76,6 +77,7 @@ async def main():
     # Register Handlers
     bot.register_command_handler('/start', start_handler)
     bot.register_command_handler('/stats', stats_handler)
+    bot.register_command_handler('/leaderboard', leaderboard_handler)
     bot.register_message_handler(number_parser_handler)
 
     # Register Tasks
