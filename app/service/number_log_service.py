@@ -106,7 +106,7 @@ class NumberLogService:
                 user_name += f" {message.last_name}"
             if not user_name:
                 user_name = "Unknown"
-            
+
             # Update User Info Cache (Before processing matches so we have current user info)
             self.user_info_cache[message.user_id] = UserInfo(user_name, message.username)
 
@@ -142,7 +142,7 @@ class NumberLogService:
             chat_id = message.chat_id
             current_matches = len(match_context.matches)
             current_hits = 0 # Placeholder for now
-            
+
             if (current_matches + current_hits) > 0:
                 if chat_id not in self.streak_info_cache:
                     self.streak_info_cache[chat_id] = StreakInfo()
@@ -157,7 +157,7 @@ class NumberLogService:
 
             # --- Transaction Logic ---
             transaction_queries = []
-            
+
             # A. Insert into number_logs
             insert_log_query = self.number_log_repo.get_insert_query()
             log_params = (
@@ -202,7 +202,7 @@ class NumberLogService:
             if is_any_match:
                 insert_match_query = self.match_log_repo.get_insert_query()
                 upsert_match_counts_query = self.match_log_repo.get_upsert_match_counts_query()
-                
+
                 for match in match_context.matches:
                     match_type, msg_user_id, matched_user_id, matched_number, matched_msg_id, _ = match
 
@@ -226,7 +226,7 @@ class NumberLogService:
                         matched_number
                     )
                     transaction_queries.append((insert_match_query, match_params))
-                    
+
                     # Upsert match counts
                     match_counts_params = (
                         message.chat_id,
@@ -247,16 +247,16 @@ class NumberLogService:
             if user_log_cache_key not in self.user_log_cache:
                 self.user_log_cache[user_log_cache_key] = deque(maxlen=10)
             self.user_log_cache[user_log_cache_key].append((number, ts, message.message_id))
-            
+
             # Update Chat Cache
             chat_log_cache_key = message.chat_id
             if chat_log_cache_key not in self.chat_log_cache:
                 self.chat_log_cache[chat_log_cache_key] = deque(maxlen=10)
             self.chat_log_cache[chat_log_cache_key].append((message.user_id, number, ts, message.message_id))
             # ---
-            
+
             logger.info(f"Logged number {number}, attendance, and count for user {message.user_id}.")
-            
+
             # Send Feedback (Reaction & Reply)
             if self.bot:
                 reaction = '🔥' if is_any_match else '👍'

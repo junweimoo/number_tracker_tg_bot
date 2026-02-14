@@ -26,7 +26,12 @@ async def number_parser_handler(message, ctx):
                 logger.info(f"Parsed number {number} from message: {message.text}")
 
                 service = ctx['number_log_service']
-                await service.process_number(message, number)
+
+                lock_mgr = ctx['lock_manager']
+                lock = await lock_mgr.get_lock(message.chat_id)
+
+                async with lock:
+                    await service.process_number(message, number)
 
         except (ValueError, IndexError):
             pass
@@ -35,6 +40,11 @@ async def stats_handler(message, ctx):
     bot = ctx['bot']
 
     service = ctx['stats_view_service']
-    response = await service.get_stats_summary(message)
+
+    lock_mgr = ctx['lock_manager']
+    lock = await lock_mgr.get_lock(message.chat_id)
+
+    async with lock:
+        response = await service.get_stats_summary(message)
     
     await bot.send_message(message.chat_id, response)

@@ -4,6 +4,7 @@ import logging
 import urllib.request
 import urllib.parse
 from concurrent.futures import ThreadPoolExecutor
+from utils.lock_manager import ChatLockManager
 
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -45,6 +46,7 @@ class TelegramBot:
         self.executor = ThreadPoolExecutor(max_workers=10)
         self.context = context if context is not None else {}
         self.context['bot'] = self
+        self.context['lock_manager'] = ChatLockManager()
 
     def register_command_handler(self, command, handler):
         """Registers a handler for a specific command (e.g., '/start')."""
