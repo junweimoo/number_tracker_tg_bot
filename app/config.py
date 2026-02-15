@@ -22,6 +22,10 @@ class Config:
         return self.data.get('replies', {}).get('reply_message')
 
     @property
+    def new_day_message(self):
+        return self.data.get('replies', {}).get('new_day_message', "New day!")
+
+    @property
     def developer_user_ids(self):
         return self.data.get('developer_user_ids', [])
 

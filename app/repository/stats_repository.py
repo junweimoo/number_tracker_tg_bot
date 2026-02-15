@@ -45,15 +45,18 @@ class StatsRepository:
         """
         return self.db.fetch_all(query, (user_id, chat_id, numbers))
 
-    def get_most_frequent_number(self, user_id, chat_id):
+    def get_most_frequent_numbers(self, user_id, chat_id):
         query = """
+        WITH max_count AS (
+            SELECT MAX(count) as max_c
+            FROM user_number_counts
+            WHERE user_id = %s AND chat_id = %s
+        )
         SELECT number, count
-        FROM user_number_counts
-        WHERE user_id = %s AND chat_id = %s
-        ORDER BY count DESC
-        LIMIT 1
+        FROM user_number_counts, max_count
+        WHERE user_id = %s AND chat_id = %s AND count = max_c
         """
-        return self.db.fetch_one(query, (user_id, chat_id))
+        return self.db.fetch_all(query, (user_id, chat_id, user_id, chat_id))
 
     def get_top_users_by_count(self, chat_id, limit=3):
         query = """

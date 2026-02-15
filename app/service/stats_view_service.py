@@ -64,9 +64,11 @@ class StatsViewService:
 
             # 4. Number with the highest count
             most_frequent_str = "N/A"
-            most_frequent = self.stats_repo.get_most_frequent_number(user_id, chat_id)
-            if most_frequent:
-                most_frequent_str = f"{most_frequent[0]} (Count: {most_frequent[1]})"
+            most_frequent_results = self.stats_repo.get_most_frequent_numbers(user_id, chat_id)
+            if most_frequent_results:
+                numbers = [str(row[0]) for row in most_frequent_results]
+                freq_count = most_frequent_results[0][1]
+                most_frequent_str = f"{', '.join(numbers)} (Count: {freq_count})"
 
             # 5. Top 3 matched users
             top_matches_str = "None"

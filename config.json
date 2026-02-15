@@ -24,7 +24,8 @@
     "GET_NUMBER_100": {"text": "Obtained number 100!", "emoji": "💯"}
   },
   "replies": {
-    "reply_message": "I detected the number: {number}"
+    "reply_message": "I detected the number: {number}",
+    "new_day_message": "New day!"
   },
   "match_replies": {
     "SAME_NUMBER_LAST": "{u1} and {u2} matched!",

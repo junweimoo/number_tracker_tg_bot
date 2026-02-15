@@ -7,10 +7,11 @@ from database.database_core import Database
 from database.database_schema import SchemaManager
 from handlers import (
     leaderboard_handler, start_handler, echo_handler, number_parser_handler, stats_handler,
-    visualize_time_series_handler, visualize_num_counts_handler)
+    visualize_time_series_handler, visualize_num_counts_handler, invoke_job_handler)
 from service.number_log_service import NumberLogService
 from service.stats_view_service import StatsViewService
 from service.visualization_service import VisualizationService
+from service.admin_service import AdminService
 from repository.number_log_repository import NumberLogRepository
 from repository.attendance_repository import AttendanceRepository
 from repository.stats_repository import StatsRepository
@@ -79,20 +80,25 @@ async def main():
     stats_view_service.set_bot(bot)
     visualization_service.set_bot(bot)
 
+    # Initialize Admin Service
+    admin_service = AdminService(bot, repositories['stats'], visualization_service, config)
+    context['admin_service'] = admin_service
+
     # Register Handlers
     bot.register_command_handler('/start', start_handler)
     bot.register_command_handler('/stats', stats_handler)
     bot.register_command_handler('/leaderboard', leaderboard_handler)
     bot.register_command_handler('/vizcounts', visualize_num_counts_handler)
     bot.register_command_handler('/viztimeseries', visualize_time_series_handler)
+    bot.register_command_handler('/invokejob', invoke_job_handler)
     bot.register_message_handler(number_parser_handler)
 
     # Register Tasks
     stats_chat_ids = getattr(config, 'daily_stats_chat_ids', None)
     for chat_id in stats_chat_ids:
-        daily_stats_task = DailyStatsTask(bot, repositories['stats'], chat_id)
+        daily_stats_task = DailyStatsTask(bot, repositories['stats'], chat_id, visualization_service, config)
         scheduler.register_recurring_job(daily_stats_task.run_midnight_stats, 0, 0, 0, tz)
-        scheduler.register_recurring_job(daily_stats_task.run_midday_stats, 13, 0, 0, tz)
+        scheduler.register_recurring_job(daily_stats_task.run_midday_stats, 13, 22, 0, tz)
 
     # Start Scheduler
     scheduler.start_worker()

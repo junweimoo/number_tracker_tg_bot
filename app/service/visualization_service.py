@@ -73,7 +73,7 @@ class VisualizationService:
             logger.error(f"Error generating visualization: {e}", exc_info=True)
             return None
 
-    def generate_time_series_visualization(self, chat_id, user_id=None, hourly_buckets=True):
+    def generate_time_series_visualization(self, chat_id, user_id=None, hourly_buckets=True, buckets=48):
         try:
             # Set style
             plt.style.use('seaborn-v0_8-pastel')
@@ -88,17 +88,17 @@ class VisualizationService:
             now = datetime.now(tz)
 
             if hourly_buckets:
-                # Past 48 hours
-                start_time = now - timedelta(hours=48)
+                # Past 'buckets' hours
+                start_time = now - timedelta(hours=buckets)
                 data = self.number_log_repo.get_hourly_counts(chat_id, start_time, user_id)
-                title_period = "Past 48 Hours"
+                title_period = f"Past {buckets} Hours"
                 xlabel = "Time (Hour)"
                 date_fmt = mdates.DateFormatter('%H:%M', tz=tz)
             else:
-                # Past 48 days
-                start_date = (now - timedelta(days=48)).date()
+                # Past 'buckets' days
+                start_date = (now - timedelta(days=buckets)).date()
                 data = self.stats_repo.get_daily_counts(chat_id, start_date, user_id)
-                title_period = "Past 48 Days"
+                title_period = f"Past {buckets} Days"
                 xlabel = "Date"
                 date_fmt = mdates.DateFormatter('%Y-%m-%d', tz=tz)
 

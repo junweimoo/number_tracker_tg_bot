@@ -95,3 +95,28 @@ async def visualize_time_series_handler(message, ctx):
         await bot.send_photo(message.chat_id, image_buf, caption="Time Series Visualization")
     else:
         await bot.send_message(message.chat_id, "No data available for visualization.")
+
+async def invoke_job_handler(message, ctx):
+    bot = ctx['bot']
+    config = ctx['config']
+    
+    # Check if user is developer
+    if str(message.user_id) not in config.developer_user_ids:
+        await bot.send_message(message.chat_id, "You are not authorized to use this command.")
+        return
+
+    args = message.text.split()
+    if len(args) < 2:
+        await bot.send_message(message.chat_id, "Usage: /invokejob {job_name}")
+        return
+
+    job_name = args[1]
+    service = ctx['admin_service']
+
+    try:
+        await service.invoke_job(message.chat_id, job_name)
+    except ValueError as e:
+        await bot.send_message(message.chat_id, str(e))
+    except Exception as e:
+        logger.error(f"Error invoking job {job_name}: {e}", exc_info=True)
+        await bot.send_message(message.chat_id, f"Error invoking job {job_name}.")
