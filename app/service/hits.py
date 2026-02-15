@@ -47,7 +47,7 @@ class HitSpecificNumberStrategy(HitStrategy):
 
             recent_logs = self.number_log_repo.get_recent_logs_for_number(message.chat_id, number, limit=3)
             if recent_logs:
-                reply += "\n\nPrevious hits:"
+                reply += f"\nLast 3 gets for {self.target_number}:"
                 sgt_timezone = timezone(timedelta(hours=8))
                 for user_name, ts in recent_logs:
                     ts_sgt = ts.astimezone(sgt_timezone)

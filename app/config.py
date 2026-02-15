@@ -44,3 +44,11 @@ class Config:
     @property
     def timezone_gmt(self):
         return self.data.get('timezone_gmt', 0)
+
+    @property
+    def match_replies(self):
+        return self.data.get('match_replies', {})
+
+    @property
+    def attendance_replies(self):
+        return self.data.get('attendance_replies', [])

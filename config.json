@@ -15,5 +15,19 @@
     "-5146811831": ["-5079989154"]
   },
   "daily_stats_chat_ids": ["-5146811831"],
-  "timezone_gmt": 8
+  "timezone_gmt": 8,
+  "match_replies": {
+    "SAME_NUMBER_LAST": "{u1} and {u2} match!",
+    "SAME_NUMBER_LAST_SELF": "{u1} self-match!",
+    "REVERSE_NUMBER_LAST": "{u1} and {u2} reverse!",
+    "REVERSE_NUMBER_LAST_SELF": "{u1} self-reverse!",
+    "SUM_TARGET": "{u1} and {u2} sum to {target}!",
+    "SUM_TARGET_SELF": "{u1} self-sum to {target}!"
+  },
+  "attendance_replies": [
+    "Thanks {name} for checking in today!",
+    "Your attendance for the past 7 days:",
+    "{attendance}",
+    "\uD83D\uDD25 Congrats on your {streak}-day streak!"
+  ]
 }

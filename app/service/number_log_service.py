@@ -68,12 +68,12 @@ class NumberLogService:
 
         # Initialize Match Strategies
         self.match_strategies = [
-            SameNumberMatchStrategy(),
-            SelfSameNumberMatchStrategy(),
-            ReverseNumberMatchStrategy(),
-            SelfReverseNumberMatchStrategy(),
-            SumTargetMatchStrategy(100),
-            SelfSumTargetMatchStrategy(100),
+            SameNumberMatchStrategy(self.config),
+            SelfSameNumberMatchStrategy(self.config),
+            ReverseNumberMatchStrategy(self.config),
+            SelfReverseNumberMatchStrategy(self.config),
+            SumTargetMatchStrategy(100, self.config),
+            SelfSumTargetMatchStrategy(100, self.config),
         ]
         
         # Initialize Hit Strategies from Config
@@ -137,7 +137,7 @@ class NumberLogService:
                     return True
         return False
 
-    async def _mark_user_attendance(self, message, today_date, yesterday_date):
+    async def _mark_user_attendance(self, message, today_date, yesterday_date, user_name):
         """
         Updates the user's streak and attendance if this is their first log of the day.
         Sends a reply with the updated streak info.
@@ -186,8 +186,9 @@ class NumberLogService:
                     attendance_str += "✅ "
                 else:
                     attendance_str += "⬜ "
-            
-            streak_reply = f"Your Streak: {current_user_streak} days 🔥\n{attendance_str}"
+
+            streak_reply = "\n".join(self.config.attendance_replies)
+            streak_reply = streak_reply.format(name=user_name, attendance=attendance_str, streak=current_user_streak)
             await self.bot.send_reply(message.chat_id, message.message_id, streak_reply)
 
         except Exception as e:
@@ -326,7 +327,7 @@ class NumberLogService:
                     should_mark_attendance = True
 
             if should_mark_attendance:
-                await self._mark_user_attendance(message, today_date, yesterday_date)
+                await self._mark_user_attendance(message, today_date, yesterday_date, user_name)
                 user_info.last_login_date = today_date
             # ---
 
@@ -453,7 +454,7 @@ class NumberLogService:
                 if hit_reaction:
                     await self.bot.set_message_reaction(message.chat_id, message.message_id, hit_reaction)
 
-                # Send hit replies
+                # Send hit replies and forward message
                 for hit in hit_context.hits:
                     _, _, hit_reply_text, _, forward_chat_ids = hit
                     if hit_reply_text:
