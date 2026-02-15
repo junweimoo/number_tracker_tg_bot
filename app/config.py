@@ -34,6 +34,10 @@ class Config:
         return self.data.get('hit_numbers', {})
 
     @property
+    def close_numbers(self):
+        return self.data.get('close_numbers', {})
+
+    @property
     def forwarding_chat_ids(self):
         return self.data.get('forwarding_chat_ids', {})
 

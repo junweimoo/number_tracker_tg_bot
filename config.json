@@ -1,21 +1,25 @@
 {
-  "regex": {
-    "message_regex": "number\\s+(\\d{1,3})"
-  },
-  "replies": {
-    "reply_message": "I detected the number: {number}"
-  },
   "developer_user_ids": ["1662984841"],
   "tracked_chat_ids": ["-5146811831"],
-  "hit_numbers": {
-    "0": {"reply": "Hit 0!", "reaction": "\uD83C\uDF4C"},
-    "100": {"reply": "Hit 100!", "reaction": "\uD83D\uDCAF"}
-  },
   "forwarding_chat_ids": {
     "-5146811831": ["-5079989154"]
   },
   "daily_stats_chat_ids": ["-5146811831"],
   "timezone_gmt": 8,
+  "regex": {
+    "message_regex": "number\\s+(\\d{1,3})"
+  },
+  "hit_numbers": {
+    "0": {"reply": "Hit 0!", "reaction": "\uD83C\uDF4C"},
+    "100": {"reply": "Hit 100!", "reaction": "\uD83D\uDCAF"}
+  },
+  "close_numbers": {
+    "1": {"reaction": "\uD83D\uDE2D"},
+    "99": {"reaction": "\uD83D\uDE22"}
+  },
+  "replies": {
+    "reply_message": "I detected the number: {number}"
+  },
   "match_replies": {
     "SAME_NUMBER_LAST": "{u1} and {u2} match!",
     "SAME_NUMBER_LAST_SELF": "{u1} self-match!",

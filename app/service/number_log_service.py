@@ -9,7 +9,7 @@ from service.matches import (
     SelfReverseNumberMatchStrategy,
     SumTargetMatchStrategy,
     SelfSumTargetMatchStrategy)
-from service.hits import HitContext, HitSpecificNumberStrategy
+from service.hits import HitContext, HitSpecificNumberStrategy, HitCloseNumberStrategy
 
 logger = logging.getLogger(__name__)
 
@@ -84,6 +84,15 @@ class NumberLogService:
                 target_number = int(number_str)
                 self.hit_strategies.append(
                     HitSpecificNumberStrategy(target_number, self.number_log_repo, self.config)
+                )
+            except ValueError:
+                logger.warning(f"Invalid hit number in config: {number_str}")
+        close_numbers = self.config.close_numbers
+        for number_str, _ in close_numbers.items():
+            try:
+                target_number = int(number_str)
+                self.hit_strategies.append(
+                    HitCloseNumberStrategy(target_number, self.config)
                 )
             except ValueError:
                 logger.warning(f"Invalid hit number in config: {number_str}")
@@ -270,7 +279,7 @@ class NumberLogService:
                 result = strategy.check(message, number, cache_data)
                 if result:
                     hit_context.add_hit(result.hit_type, result.hit_number, result.reply_text,
-                                        result.react_emoji, result.forward_chat_ids)
+                                        result.react_emoji, result.forward_chat_ids, result.streak_counted)
                     logger.info(f"Hit detected! - User {message.user_id} in chat {message.chat_id}.")
             # ---
 
@@ -281,8 +290,8 @@ class NumberLogService:
             for strategy in self.match_strategies:
                 if strategy.has_conflict(match_context):
                     continue
-                result = strategy.check(message, number, cache_data)
-                if result:
+                results = strategy.check(message, number, cache_data)
+                for result in results:
                     match_context.add_match(
                         result.match_type,
                         message.user_id,
@@ -299,7 +308,7 @@ class NumberLogService:
             # --- Streak Logic ---
             chat_id = message.chat_id
             current_matches = len(match_context.matches)
-            current_hits = len(hit_context.hits)
+            current_hits = len([hit for hit in hit_context.hits if hit[5]])
 
             if (current_matches + current_hits) > 0:
                 if chat_id not in self.streak_info_cache:
@@ -448,7 +457,7 @@ class NumberLogService:
                 # Send last hit reaction
                 hit_reaction = None
                 for hit in hit_context.hits:
-                    _, _, _, current_reaction, _ = hit
+                    _, _, _, current_reaction, _, _ = hit
                     if current_reaction:
                         hit_reaction = current_reaction
                 if hit_reaction:
@@ -456,7 +465,7 @@ class NumberLogService:
 
                 # Send hit replies and forward message
                 for hit in hit_context.hits:
-                    _, _, hit_reply_text, _, forward_chat_ids = hit
+                    _, _, hit_reply_text, _, forward_chat_ids, _ = hit
                     if hit_reply_text:
                         await self.bot.send_reply(message.chat_id, message.message_id, hit_reply_text)
                     for forward_chat_id in forward_chat_ids:
@@ -469,16 +478,20 @@ class NumberLogService:
                         await self.bot.send_reply(message.chat_id, matched_msg_id, match_reply_text)
 
             # Send numbers obtained message if new number
-            if remaining_numbers:
-                remaining_numbers_reply = (f"New number! {len(remaining_numbers)} "
-                                           f"number{'s' if len(remaining_numbers) > 1 else ''} left to collect")
-                if len(remaining_numbers) < 10:
-                    remaining_numbers_reply += f": {', '.join(map(str, remaining_numbers))}"
-                await self.bot.send_reply(message.chat_id, message.message_id, remaining_numbers_reply)
+            if remaining_numbers is not None:
+                if len(remaining_numbers) == 0:
+                    await self.bot.send_reply(message.chat_id, message.message_id, "All numbers collected!")
+                else:
+                    remaining_numbers_reply = (f"New number! {len(remaining_numbers)} "
+                                               f"number{'s' if len(remaining_numbers) > 1 else ''} left to collect")
+                    if len(remaining_numbers) < 10:
+                        remaining_numbers_reply += f": {', '.join(map(str, remaining_numbers))}"
+                    await self.bot.send_reply(message.chat_id, message.message_id, remaining_numbers_reply)
 
             # Send Streak message if total >= 2
             if streak_total >= 2:
-                streak_msg = f"Streak: {streak_total}!"
+                streak_msg = f"{streak_total}-Streak!\n"
+                streak_msg += '🔥' * streak_total
                 await self.bot.send_message(message.chat_id, streak_msg)
             # ---
 

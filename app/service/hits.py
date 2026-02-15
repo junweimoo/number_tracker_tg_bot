@@ -7,22 +7,23 @@ class HitType(Enum):
     CLOSE_NUMBER = "CLOSE_NUMBER"
 
 class HitResult:
-    def __init__(self, hit_type, hit_number, reply_text, react_emoji=None, forward_chat_ids=None):
+    def __init__(self, hit_type, hit_number, reply_text, react_emoji=None, forward_chat_ids=None, streak_counted = True):
         self.hit_type = hit_type
         self.hit_number = hit_number
         self.reply_text = reply_text
         self.react_emoji = react_emoji
         self.forward_chat_ids = forward_chat_ids
+        self.streak_counted = streak_counted
 
 class HitContext:
     def __init__(self):
-        # List of (HitType, hit_number, reply_text, react_emoji, forward_chat_ids)
+        # List of (HitType, hit_number, reply_text, react_emoji, forward_chat_ids, streak_counted)
         self.hits = []
         # Set of HitType
         self.types = set()
 
-    def add_hit(self, hit_type, hit_number, reply_text, react_emoji=None, forward_chat_ids=None):
-        self.hits.append((hit_type, hit_number, reply_text, react_emoji, forward_chat_ids))
+    def add_hit(self, hit_type, hit_number, reply_text, react_emoji=None, forward_chat_ids=None, streak_counted=True):
+        self.hits.append((hit_type, hit_number, reply_text, react_emoji, forward_chat_ids, streak_counted))
         self.types.add(hit_type)
 
 class HitStrategy(ABC):
@@ -59,6 +60,27 @@ class HitSpecificNumberStrategy(HitStrategy):
                 number,
                 reply,
                 self.react_emoji,
-                self.forwarding_chat_ids.get(str(message.chat_id), [])
+                self.forwarding_chat_ids.get(str(message.chat_id), []),
+                True
             )
+        return None
+
+class HitCloseNumberStrategy(HitStrategy):
+    def __init__(self, target_number, config):
+        self.target_number = target_number
+        self.config = config
+
+        details = config.close_numbers.get(str(target_number))
+        self.react_emoji = details.get('reaction')
+
+    def check(self, message, number, cache_data):
+        if number == self.target_number:
+             return HitResult(
+                HitType.CLOSE_NUMBER,
+                number,
+                None,
+                self.react_emoji,
+                [],
+                 False
+             )
         return None

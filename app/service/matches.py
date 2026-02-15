@@ -37,7 +37,7 @@ class MatchResult:
 
 class MatchStrategy(ABC):
     @abstractmethod
-    def check(self, message, number, cache_data) -> MatchResult:
+    def check(self, message, number, cache_data) -> list[MatchResult]:
         pass
 
     @abstractmethod
@@ -57,14 +57,14 @@ class SameNumberMatchStrategy(MatchStrategy):
                 u1 = cache_data.user_info_cache.get((last_user_id, message.chat_id))
                 u2 = cache_data.user_info_cache.get((message.user_id, message.chat_id))
                 reply_str = config_str.format(u1=u1.user_name, u2=u2.user_name)
-                return MatchResult(
+                return [MatchResult(
                     MatchType.SAME_NUMBER_LAST,
                     last_user_id,
                     last_number,
                     last_msg_id,
                     reply_str
-                )
-        return None
+                )]
+        return []
 
     def has_conflict(self, match_context) -> bool:
         return MatchType.SAME_NUMBER_LAST_SELF in match_context.types
@@ -81,14 +81,14 @@ class SelfSameNumberMatchStrategy(MatchStrategy):
                 config_str = self.config.match_replies.get(MatchType.SAME_NUMBER_LAST_SELF.name, "Match!")
                 u1 = cache_data.user_info_cache.get((message.user_id, message.chat_id))
                 reply_str = config_str.format(u1=u1.user_name)
-                return MatchResult(
+                return [MatchResult(
                     MatchType.SAME_NUMBER_LAST_SELF,
                     message.user_id,
                     last_number,
                     last_msg_id,
                     reply_str
-                )
-        return None
+                )]
+        return []
 
     def has_conflict(self, match_context) -> bool:
         return MatchType.SAME_NUMBER_LAST in match_context.types
@@ -99,12 +99,12 @@ class ReverseNumberMatchStrategy(MatchStrategy):
 
     def check(self, message, number, cache_data):
         if not (10 <= number <= 99):
-            return None
+            return []
         
         tens = number // 10
         ones = number % 10
         if tens == ones:
-            return None
+            return []
             
         chat_log = cache_data.chat_log_cache.get(message.chat_id)
         if chat_log:
@@ -115,14 +115,14 @@ class ReverseNumberMatchStrategy(MatchStrategy):
                 u1 = cache_data.user_info_cache.get((last_user_id, message.chat_id))
                 u2 = cache_data.user_info_cache.get((message.user_id, message.chat_id))
                 reply_str = config_str.format(u1=u1.user_name, u2=u2.user_name)
-                return MatchResult(
+                return [MatchResult(
                     MatchType.REVERSE_NUMBER_LAST,
                     last_user_id,
                     last_number,
                     last_msg_id,
                     reply_str
-                )
-        return None
+                )]
+        return []
 
     def has_conflict(self, match_context) -> bool:
         return MatchType.REVERSE_NUMBER_LAST_SELF in match_context.types
@@ -133,12 +133,12 @@ class SelfReverseNumberMatchStrategy(MatchStrategy):
 
     def check(self, message, number, cache_data):
         if not (10 <= number <= 99):
-            return None
+            return []
 
         tens = number // 10
         ones = number % 10
         if tens == ones:
-            return None
+            return []
 
         user_log = cache_data.user_log_cache.get((message.user_id, message.chat_id))
         if user_log:
@@ -148,14 +148,14 @@ class SelfReverseNumberMatchStrategy(MatchStrategy):
                 config_str = self.config.match_replies.get(MatchType.REVERSE_NUMBER_LAST_SELF.name, "Reverse!")
                 u1 = cache_data.user_info_cache.get((message.user_id, message.chat_id))
                 reply_str = config_str.format(u1=u1.user_name)
-                return MatchResult(
+                return [MatchResult(
                     MatchType.REVERSE_NUMBER_LAST_SELF,
                     message.user_id,
                     last_number,
                     last_msg_id,
                     reply_str
-                )
-        return None
+                )]
+        return []
 
     def has_conflict(self, match_context) -> bool:
         return MatchType.REVERSE_NUMBER_LAST in match_context.types
@@ -174,14 +174,14 @@ class SumTargetMatchStrategy(MatchStrategy):
                 u1 = cache_data.user_info_cache.get((last_user_id, message.chat_id))
                 u2 = cache_data.user_info_cache.get((message.user_id, message.chat_id))
                 reply_str = config_str.format(u1=u1.user_name, u2=u2.user_name, target=self.target)
-                return MatchResult(
+                return [MatchResult(
                     MatchType.SUM_TARGET,
                     last_user_id,
                     last_number,
                     last_msg_id,
                     reply_str
-                )
-        return None
+                )]
+        return []
 
     def has_conflict(self, match_context) -> bool:
         return MatchType.SUM_TARGET_SELF in match_context.types
@@ -199,14 +199,14 @@ class SelfSumTargetMatchStrategy(MatchStrategy):
                 config_str = self.config.match_replies.get(MatchType.SUM_TARGET_SELF.name, "Sum {target}!")
                 u1 = cache_data.user_info_cache.get((message.user_id, message.chat_id))
                 reply_str = config_str.format(u1=u1.user_name, target=self.target)
-                return MatchResult(
+                return [MatchResult(
                     MatchType.SUM_TARGET_SELF,
                     message.user_id,
                     last_number,
                     last_msg_id,
                     reply_str
-                )
-        return None
+                )]
+        return []
 
     def has_conflict(self, match_context) -> bool:
         return MatchType.SUM_TARGET in match_context.types
