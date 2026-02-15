@@ -8,7 +8,21 @@ from service.matches import (
     ReverseNumberMatchStrategy,
     SelfReverseNumberMatchStrategy,
     SumTargetMatchStrategy,
-    SelfSumTargetMatchStrategy)
+    SelfSumTargetMatchStrategy,
+    ABCSumMatchStrategy,
+    DoubleMatchStrategy,
+    SelfDoubleMatchStrategy,
+    HalfMatchStrategy,
+    SelfHalfMatchStrategy,
+    StepMatchStrategy,
+    SelfStepMatchStrategy,
+    SquareMatchStrategy,
+    SelfSquareMatchStrategy,
+    SqrtMatchStrategy,
+    SelfSqrtMatchStrategy,
+    ArithmeticProgressionMatchStrategy,
+    GeometricProgressionMatchStrategy,
+    DigitSumMatchStrategy)
 from service.hits import HitContext, HitSpecificNumberStrategy, HitCloseNumberStrategy
 
 logger = logging.getLogger(__name__)
@@ -74,6 +88,20 @@ class NumberLogService:
             SelfReverseNumberMatchStrategy(self.config),
             SumTargetMatchStrategy(100, self.config),
             SelfSumTargetMatchStrategy(100, self.config),
+            ABCSumMatchStrategy(self.config),
+            DoubleMatchStrategy(self.config),
+            SelfDoubleMatchStrategy(self.config),
+            HalfMatchStrategy(self.config),
+            SelfHalfMatchStrategy(self.config),
+            # StepMatchStrategy(self.config),
+            # SelfStepMatchStrategy(self.config),
+            SquareMatchStrategy(self.config),
+            SelfSquareMatchStrategy(self.config),
+            SqrtMatchStrategy(self.config),
+            SelfSqrtMatchStrategy(self.config),
+            ArithmeticProgressionMatchStrategy(self.config),
+            GeometricProgressionMatchStrategy(self.config),
+            DigitSumMatchStrategy(self.config)
         ]
         
         # Initialize Hit Strategies from Config
