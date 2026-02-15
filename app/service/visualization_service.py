@@ -447,44 +447,63 @@ class VisualizationService:
             ax_text = fig.add_subplot(gs[:, 0])
             ax_text.axis('off')
             
+            hit_numbers = sorted([int(n) for n in self.config.hit_numbers.keys()])
+            streak_query = self.user_repo.get_fetch_streak_query()
+
+            # Prepare all coroutines for parallel execution
+            tasks = [
+                self.stats_repo.get_user_stats(user_id, chat_id),
+                self.stats_repo.get_specific_number_counts(user_id, chat_id, hit_numbers),
+                self.stats_repo.get_most_frequent_numbers(user_id, chat_id),
+                self.match_log_repo.get_top_matches(user_id, chat_id, limit=3),
+                self.db.fetch_one(streak_query, (user_id, chat_id)),
+                self.stats_view_service.get_user_achievements_emojis(user_id, chat_id),
+                self.user_repo.get_all_users_in_chat(chat_id)
+            ]
+
+            # Execute all tasks concurrently
+            results = await asyncio.gather(*tasks)
+
+            # Unpack results
+            user_stats_result = results[0]
+            specific_counts_raw = results[1]
+            most_frequent_results = results[2]
+            top_matches = results[3]
+            streak_result = results[4]
+            achievements_str = results[5]
+            all_users = results[6]
+
+            user_map = {uid: name for uid, name in all_users}
+
             # Fetch data for text stats
             count = 0
             average = 0
             unique_count = 0
-            result = await self.stats_repo.get_user_stats(user_id, chat_id)
-            if result and result[0] is not None and result[0] > 0:
-                count = result[0]
-                total_sum = result[1]
-                unique_count = result[2]
+            if user_stats_result and user_stats_result[0] is not None and user_stats_result[0] > 0:
+                count = user_stats_result[0]
+                total_sum = user_stats_result[1]
+                unique_count = user_stats_result[2]
                 average = round(total_sum / count, 4)
 
-            hit_numbers = sorted([int(n) for n in self.config.hit_numbers.keys()])
-            specific_counts_raw = await self.stats_repo.get_specific_number_counts(user_id, chat_id, hit_numbers)
             specific_counts_dict = {num: cnt for num, cnt in specific_counts_raw}
             counts_list = [f"{num} (Count: {specific_counts_dict.get(num, 0)})" for num in hit_numbers]
             counts_str = "\n".join(counts_list) if counts_list else "No numbers recorded yet."
 
             most_frequent_str = "N/A"
-            most_frequent_results = await self.stats_repo.get_most_frequent_numbers(user_id, chat_id)
             if most_frequent_results:
                 numbers = [str(row[0]) for row in most_frequent_results]
                 freq_count = most_frequent_results[0][1]
                 most_frequent_str = f"{', '.join(numbers)} (Count: {freq_count})"
 
             top_matches_str = "None"
-            top_matches = await self.match_log_repo.get_top_matches(user_id, chat_id, limit=3)
             if top_matches:
                 match_names = []
                 for match_user_id, match_count in top_matches:
-                    match_name = await self.user_repo.get_user_name(match_user_id, chat_id)
+                    match_name = user_map.get(match_user_id, "Unknown")
                     match_names.append(f"{match_name} ({match_count})")
                 top_matches_str = "\n".join(match_names)
 
-            streak_query = self.user_repo.get_fetch_streak_query()
-            streak_result = await self.db.fetch_one(streak_query, (user_id, chat_id))
             current_streak = streak_result[0] if streak_result else 0
-
-            achievements_str = await self.stats_view_service.get_user_achievements_emojis(user_id, chat_id)
 
             # Format the response using config
             profile_template = "\n".join(self.config.profile_text)
@@ -501,14 +520,14 @@ class VisualizationService:
             )
             
             # Add Title
-            ax_text.text(0, 1, f"{first_name.upper()}",
+            ax_text.text(0, 1, f"{first_name}",
                          transform=ax_text.transAxes, ha='left', va='top',
-                         fontsize=24, fontweight='bold', color='#228B22')
+                         fontsize=26, fontweight='bold', color='#228B22')
             
             # Add Stats Content
             ax_text.text(0, 0.92, stats_text,
                          transform=ax_text.transAxes, ha='left', va='top', 
-                         fontsize=16, linespacing=2.0, color='#333333')
+                         fontsize=18, linespacing=2.0, color='#333333')
 
             # --- Right Column: Visualizations ---
             

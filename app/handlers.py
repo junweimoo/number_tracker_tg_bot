@@ -1,6 +1,7 @@
 import re
 import logging
 import os
+import time
 from datetime import datetime, timedelta, timezone
 
 logger = logging.getLogger(__name__)
@@ -95,7 +96,12 @@ async def stats_handler(message, ctx):
     lock = await lock_mgr.get_lock(message.chat_id)
 
     async with lock:
+        start_time = time.perf_counter()
+
         response = await service.get_user_stats_summary(message)
+
+        duration = time.perf_counter() - start_time
+        logger.info(f"Fetched user stats in {duration:.6f}s")
     
     await bot.send_html(message.chat_id, response)
 
@@ -115,7 +121,12 @@ async def leaderboard_handler(message, ctx):
     lock = await lock_mgr.get_lock(message.chat_id)
 
     async with lock:
+        start_time = time.perf_counter()
+
         response = await service.get_leaderboard(message.chat_id)
+
+        duration = time.perf_counter() - start_time
+        logger.info(f"Fetched leaderboard in {duration:.6f}s")
 
     await bot.send_html(message.chat_id, response)
 
@@ -137,7 +148,12 @@ async def visualize_group_num_counts_handler(message, ctx):
     lock = await lock_mgr.get_lock(message.chat_id)
 
     async with lock:
+        start_time = time.perf_counter()
+
         image_buf = await service.generate_number_count_visualization(message.chat_id, start_date=start_date)
+
+        duration = time.perf_counter() - start_time
+        logger.info(f"Generated number count histogram in {duration:.6f}s")
     
     if image_buf:
         await bot.send_photo(message.chat_id, image_buf, caption="Number Frequency Visualization")
@@ -162,7 +178,12 @@ async def visualize_my_num_counts_handler(message, ctx):
     lock = await lock_mgr.get_lock(message.chat_id)
 
     async with lock:
+        start_time = time.perf_counter()
+
         image_buf = await service.generate_number_count_visualization(message.chat_id, user_id=message.user_id, start_date=start_date)
+
+        duration = time.perf_counter() - start_time
+        logger.info(f"Generated number count histogram in {duration:.6f}s")
     
     if image_buf:
         await bot.send_photo(message.chat_id, image_buf, caption="Your Number Frequency Visualization")
@@ -187,7 +208,12 @@ async def visualize_group_num_counts_grid_handler(message, ctx):
     lock = await lock_mgr.get_lock(message.chat_id)
 
     async with lock:
+        start_time = time.perf_counter()
+
         image_buf = await service.generate_number_count_visualization_grid(message.chat_id, start_date=start_date)
+
+        duration = time.perf_counter() - start_time
+        logger.info(f"Generated number count grid in {duration:.6f}s")
     
     if image_buf:
         await bot.send_photo(message.chat_id, image_buf, caption="Number Frequency Grid Visualization")
@@ -212,8 +238,13 @@ async def visualize_my_num_counts_grid_handler(message, ctx):
     lock = await lock_mgr.get_lock(message.chat_id)
 
     async with lock:
+        start_time = time.perf_counter()
+
         image_buf = await service.generate_number_count_visualization_grid(message.chat_id, user_id=message.user_id, start_date=start_date)
-    
+
+        duration = time.perf_counter() - start_time
+        logger.info(f"Generated number count grid in {duration:.6f}s")
+
     if image_buf:
         await bot.send_photo(message.chat_id, image_buf, caption="Your Number Frequency Grid Visualization")
     else:
@@ -234,7 +265,12 @@ async def visualize_group_time_series_handler(message, ctx):
     lock = await lock_mgr.get_lock(message.chat_id)
 
     async with lock:
+        start_time = time.perf_counter()
+
         image_buf = await service.generate_time_series_visualization(message.chat_id)
+
+        duration = time.perf_counter() - start_time
+        logger.info(f"Generated time series graph in {duration:.6f}s")
 
     if image_buf:
         await bot.send_photo(message.chat_id, image_buf, caption="Time Series Visualization")
@@ -256,7 +292,12 @@ async def visualize_my_time_series_handler(message, ctx):
     lock = await lock_mgr.get_lock(message.chat_id)
 
     async with lock:
+        start_time = time.perf_counter()
+
         image_buf = await service.generate_time_series_visualization(message.chat_id, user_id=message.user_id)
+
+        duration = time.perf_counter() - start_time
+        logger.info(f"Generated time series graph in {duration:.6f}s")
 
     if image_buf:
         await bot.send_photo(message.chat_id, image_buf, caption="Your Time Series Visualization")
@@ -278,7 +319,12 @@ async def visualize_chat_match_graph_handler(message, ctx):
     lock = await lock_mgr.get_lock(message.chat_id)
 
     async with lock:
+        start_time = time.perf_counter()
+
         image_buf = await service.generate_match_graph_visualization(message.chat_id)
+
+        duration = time.perf_counter() - start_time
+        logger.info(f"Generated match graph in {duration:.6f}s")
 
     if image_buf:
         await bot.send_photo(message.chat_id, image_buf, caption="Chat Match Graph Visualization")
@@ -300,7 +346,12 @@ async def visualize_my_match_graph_handler(message, ctx):
     lock = await lock_mgr.get_lock(message.chat_id)
 
     async with lock:
+        start_time = time.perf_counter()
+
         image_buf = await service.generate_match_graph_visualization(message.chat_id, user_id=message.user_id)
+
+        duration = time.perf_counter() - start_time
+        logger.info(f"Generated match graph in {duration:.6f}s")
 
     if image_buf:
         await bot.send_photo(message.chat_id, image_buf, caption="Your Match Graph Visualization")
@@ -322,7 +373,12 @@ async def visualize_personal_profile_handler(message, ctx):
     lock = await lock_mgr.get_lock(message.chat_id)
 
     async with lock:
+        start_time = time.perf_counter()
+
         image_buf = await service.personal_stats_visualization(message.chat_id, message.user_id, message.first_name)
+
+        duration = time.perf_counter() - start_time
+        logger.info(f"Generated profile in {duration:.6f}s")
 
     if image_buf:
         await bot.send_photo(message.chat_id, image_buf, caption=f"Personal Profile for {message.first_name}")
