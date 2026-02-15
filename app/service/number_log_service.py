@@ -151,7 +151,7 @@ class NumberLogService:
         """Pre-caches user info from the database."""
         try:
             query = self.user_repo.get_all_users_query()
-            users = self.db.fetch_all(query)
+            users = self.db._fetch_all_sync(query)
             if users:
                 for user in users:
                     # Unpack all columns
@@ -217,7 +217,7 @@ class NumberLogService:
 
         try:
             # Execute streak update and attendance insert in a single transaction
-            self.db.execute_transaction([
+            await self.db.execute_transaction([
                 (update_streak_query, streak_params),
                 (insert_attendance_query, attendance_params)
             ])
@@ -225,11 +225,11 @@ class NumberLogService:
             # Fetch updated streak and attendance history for reply
             # We need to fetch the current streak from user_data
             streak_query = self.user_repo.get_fetch_streak_query()
-            streak_result = self.db.fetch_one(streak_query, (message.user_id, message.chat_id))
+            streak_result = await self.db.fetch_one(streak_query, (message.user_id, message.chat_id))
             current_user_streak = streak_result[0] if streak_result else 0
             
             # Fetch last 7 days attendance
-            attendance_rows = self.attendance_repo.get_recent_attendance(message.user_id, message.chat_id, limit=7)
+            attendance_rows = await self.attendance_repo.get_recent_attendance(message.user_id, message.chat_id, limit=7)
             attendance_dates = [row[0] for row in attendance_rows]
             
             # Format attendance string
@@ -325,7 +325,7 @@ class NumberLogService:
             hit_context = HitContext()
 
             for strategy in self.hit_strategies:
-                result = strategy.check(message, number, cache_data)
+                result = await strategy.check(message, number, cache_data)
                 if result:
                     hit_context.add_hit(result.hit_type, result.hit_number, result.reply_text,
                                         result.react_emoji, result.forward_chat_ids, result.streak_counted)
@@ -379,7 +379,7 @@ class NumberLogService:
                 should_mark_attendance = False
             else:
                 last_login_query = self.user_repo.get_last_login_date_query()
-                last_login_result = self.db.fetch_one(last_login_query, (message.user_id, message.chat_id))
+                last_login_result = await self.db.fetch_one(last_login_query, (message.user_id, message.chat_id))
                 db_last_login_date = last_login_result[0] if last_login_result else None
                 if db_last_login_date != today_date:
                     should_mark_attendance = True
@@ -394,7 +394,7 @@ class NumberLogService:
             # --- Achievement Logic ---
             achievement_context = AchievementContext()
             for strategy in self.achievement_strategies:
-                result = strategy.check(message, number, cache_data, remaining_numbers)
+                result = await strategy.check(message, number, cache_data, remaining_numbers)
                 if result:
                     achievement_context.add_achievement(result.achievement_type, result.reply_text)
                     logger.info(f"Achievement unlocked! - {result.achievement_type.name} for user {message.user_id}.")
@@ -509,7 +509,7 @@ class NumberLogService:
             if self.transaction_queue:
                 await self.transaction_queue.submit(transaction_queries)
             else:
-                self.db.execute_transaction(transaction_queries)
+                await self.db.execute_transaction(transaction_queries)
             # ---
 
             # --- Update Caches ---

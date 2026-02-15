@@ -73,7 +73,7 @@ async def visualize_num_counts_handler(message, ctx):
     lock = await lock_mgr.get_lock(message.chat_id)
 
     async with lock:
-        image_buf = service.generate_number_count_visualization(message.chat_id)
+        image_buf = await service.generate_number_count_visualization(message.chat_id)
     
     if image_buf:
         await bot.send_photo(message.chat_id, image_buf, caption="Number Frequency Visualization")
@@ -89,7 +89,7 @@ async def visualize_time_series_handler(message, ctx):
     lock = await lock_mgr.get_lock(message.chat_id)
 
     async with lock:
-        image_buf = service.generate_time_series_visualization(message.chat_id)
+        image_buf = await service.generate_time_series_visualization(message.chat_id)
 
     if image_buf:
         await bot.send_photo(message.chat_id, image_buf, caption="Time Series Visualization")

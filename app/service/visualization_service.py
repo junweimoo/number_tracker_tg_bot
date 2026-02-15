@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import matplotlib.ticker as ticker
 import io
+import asyncio
 from datetime import datetime, timedelta, timezone
 
 logger = logging.getLogger(__name__)
@@ -21,13 +22,13 @@ class VisualizationService:
     def set_bot(self, bot):
         self.bot = bot
 
-    def generate_number_count_visualization(self, chat_id, user_id=None, start_date=None):
+    async def generate_number_count_visualization(self, chat_id, user_id=None, start_date=None):
         try:
             if start_date:
-                data = self.stats_repo.get_number_counts_since(chat_id, start_date, user_id)
+                data = await self.stats_repo.get_number_counts_since(chat_id, start_date, user_id)
                 title_suffix = f"since {start_date}"
             else:
-                data = self.stats_repo.get_all_number_counts(chat_id, user_id)
+                data = await self.stats_repo.get_all_number_counts(chat_id, user_id)
                 title_suffix = "All Time"
 
             if not data:
@@ -38,6 +39,8 @@ class VisualizationService:
             counts = [row[1] for row in data]
 
             # Create figure
+            # Matplotlib is not thread-safe and can be slow, but for now we run it in the loop.
+            # Ideally this should be in an executor if it takes too long.
             color = '#90EE90' # Light green
             edge_color = '#228B22' # Forest green
             plt.figure(figsize=(12, 6))
@@ -46,7 +49,7 @@ class VisualizationService:
             # Determine user name for title if specific user
             user_info = ""
             if user_id:
-                user_name = self.user_repo.get_user_name(user_id, chat_id)
+                user_name = await self.user_repo.get_user_name(user_id, chat_id)
                 user_info = f" for {user_name}"
 
             plt.title(f"Number Frequency{user_info} ({title_suffix})")
@@ -73,7 +76,7 @@ class VisualizationService:
             logger.error(f"Error generating visualization: {e}", exc_info=True)
             return None
 
-    def generate_time_series_visualization(self, chat_id, user_id=None, hourly_buckets=True, buckets=48):
+    async def generate_time_series_visualization(self, chat_id, user_id=None, hourly_buckets=True, buckets=48):
         try:
             # Set style
             plt.style.use('seaborn-v0_8-pastel')
@@ -90,14 +93,14 @@ class VisualizationService:
             if hourly_buckets:
                 # Past 'buckets' hours
                 start_time = now - timedelta(hours=buckets)
-                data = self.number_log_repo.get_hourly_counts(chat_id, start_time, user_id)
+                data = await self.number_log_repo.get_hourly_counts(chat_id, start_time, user_id)
                 title_period = f"Past {buckets} Hours"
                 xlabel = "Time (Hour)"
                 date_fmt = mdates.DateFormatter('%H:%M', tz=tz)
             else:
                 # Past 'buckets' days
                 start_date = (now - timedelta(days=buckets)).date()
-                data = self.stats_repo.get_daily_counts(chat_id, start_date, user_id)
+                data = await self.stats_repo.get_daily_counts(chat_id, start_date, user_id)
                 title_period = f"Past {buckets} Days"
                 xlabel = "Date"
                 date_fmt = mdates.DateFormatter('%Y-%m-%d', tz=tz)
@@ -116,7 +119,7 @@ class VisualizationService:
             # Formatting
             user_info = ""
             if user_id:
-                user_name = self.user_repo.get_user_name(user_id, chat_id)
+                user_name = await self.user_repo.get_user_name(user_id, chat_id)
                 user_info = f" for {user_name}"
 
             plt.title(f"Activity Over Time{user_info} ({title_period})", fontsize=16, color='#333333')

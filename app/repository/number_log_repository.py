@@ -15,7 +15,7 @@ class NumberLogRepository:
         WHERE user_id = %s AND chat_id = %s
         """
 
-    def get_recent_logs_for_number(self, chat_id, number, limit=3):
+    async def get_recent_logs_for_number(self, chat_id, number, limit=3):
         query = """
         SELECT user_name, ts
         FROM number_logs
@@ -23,9 +23,9 @@ class NumberLogRepository:
         ORDER BY ts DESC
         LIMIT %s
         """
-        return self.db.fetch_all(query, (chat_id, number, limit))
+        return await self.db.fetch_all(query, (chat_id, number, limit))
 
-    def get_hourly_counts(self, chat_id, start_time, user_id=None):
+    async def get_hourly_counts(self, chat_id, start_time, user_id=None):
         if user_id:
             query = """
             SELECT time_bucket('1 hour', ts) AS bucket, count(*)
@@ -34,7 +34,7 @@ class NumberLogRepository:
             GROUP BY bucket
             ORDER BY bucket
             """
-            return self.db.fetch_all(query, (chat_id, user_id, start_time))
+            return await self.db.fetch_all(query, (chat_id, user_id, start_time))
         else:
             query = """
             SELECT time_bucket('1 hour', ts) AS bucket, count(*)
@@ -43,4 +43,24 @@ class NumberLogRepository:
             GROUP BY bucket
             ORDER BY bucket
             """
-            return self.db.fetch_all(query, (chat_id, start_time))
+            return await self.db.fetch_all(query, (chat_id, start_time))
+
+    def get_hourly_counts_query(self, chat_id, start_time, user_id=None):
+        if user_id:
+            query = """
+            SELECT time_bucket('1 hour', ts) AS bucket, count(*)
+            FROM number_logs
+            WHERE chat_id = %s AND user_id = %s AND ts >= %s
+            GROUP BY bucket
+            ORDER BY bucket
+            """
+            return query, (chat_id, user_id, start_time)
+        else:
+            query = """
+            SELECT time_bucket('1 hour', ts) AS bucket, count(*)
+            FROM number_logs
+            WHERE chat_id = %s AND ts >= %s
+            GROUP BY bucket
+            ORDER BY bucket
+            """
+            return query, (chat_id, start_time)

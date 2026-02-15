@@ -28,7 +28,7 @@ class HitContext:
 
 class HitStrategy(ABC):
     @abstractmethod
-    def check(self, message, number, cache_data) -> HitResult:
+    async def check(self, message, number, cache_data) -> HitResult:
         pass
 
 class HitSpecificNumberStrategy(HitStrategy):
@@ -42,11 +42,11 @@ class HitSpecificNumberStrategy(HitStrategy):
         self.react_emoji = details.get('reaction')
         self.forwarding_chat_ids = config.forwarding_chat_ids
 
-    def check(self, message, number, cache_data):
+    async def check(self, message, number, cache_data):
         if number == self.target_number:
             reply = self.reply_text
 
-            recent_logs = self.number_log_repo.get_recent_logs_for_number(message.chat_id, number, limit=3)
+            recent_logs = await self.number_log_repo.get_recent_logs_for_number(message.chat_id, number, limit=3)
             if recent_logs:
                 reply += f"\nLast 3 gets for {self.target_number}:"
                 sgt_timezone = timezone(timedelta(hours=8))
@@ -73,7 +73,7 @@ class HitCloseNumberStrategy(HitStrategy):
         details = config.close_numbers.get(str(target_number))
         self.react_emoji = details.get('reaction')
 
-    def check(self, message, number, cache_data):
+    async def check(self, message, number, cache_data):
         if number == self.target_number:
              return HitResult(
                 HitType.CLOSE_NUMBER,

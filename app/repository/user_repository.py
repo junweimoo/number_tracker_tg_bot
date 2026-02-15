@@ -72,7 +72,11 @@ class UserRepository:
         FROM user_data
         """
 
-    def get_user_name(self, user_id, chat_id):
+    async def get_user_name(self, user_id, chat_id):
         query = "SELECT user_name FROM user_data WHERE user_id = %s AND chat_id = %s"
-        result = self.db.fetch_one(query, (user_id, chat_id))
+        result = await self.db.fetch_one(query, (user_id, chat_id))
         return result[0] if result else "Unknown"
+
+    def get_user_name_query(self, user_id, chat_id):
+        query = "SELECT user_name FROM user_data WHERE user_id = %s AND chat_id = %s"
+        return query, (user_id, chat_id)

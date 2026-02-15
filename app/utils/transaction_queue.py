@@ -39,8 +39,7 @@ class TransactionQueue:
                 queries = await self.queue.get()
                 
                 try:
-                    loop = asyncio.get_running_loop()
-                    await loop.run_in_executor(None, self.db.execute_transaction, queries)
+                    await self.db.execute_transaction(queries)
                     
                 except Exception as e:
                     logger.error(f"Transaction failed: {e}", exc_info=True)

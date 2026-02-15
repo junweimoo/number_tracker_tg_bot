@@ -8,7 +8,7 @@ class SchemaManager:
 
     def init_db(self):
         """Initializes the database tables, TimescaleDB extension, and Continuous Aggregates."""
-        self.db.execute_query("CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE;")
+        self.db._execute_query_sync("CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE;")
         self.init_number_logs()
         self.init_match_logs()
         self.init_user_data()
@@ -32,13 +32,13 @@ class SchemaManager:
              PRIMARY KEY (id, ts)
             ); 
         """
-        self.db.execute_query(create_table_query)
+        self.db._execute_query_sync(create_table_query)
 
         # 2. Convert to hypertable
-        self.db.execute_query("SELECT create_hypertable('number_logs', 'ts', if_not_exists => TRUE);")
+        self.db._execute_query_sync("SELECT create_hypertable('number_logs', 'ts', if_not_exists => TRUE);")
 
         # 3. Create index for user_id and chat_id on raw table
-        self.db.execute_query("CREATE INDEX IF NOT EXISTS idx_logs_user_chat ON number_logs (user_id, chat_id);")
+        self.db._execute_query_sync("CREATE INDEX IF NOT EXISTS idx_logs_user_chat ON number_logs (user_id, chat_id);")
 
         logger.info("Table 'number_logs' and its index initialized.")
 
@@ -57,13 +57,13 @@ class SchemaManager:
             WITH NO DATA;
             """
         try:
-            self.db.execute_query(create_view_query)
+            self.db._execute_query_sync(create_view_query)
 
             # 5. Create index on the Materialized View itself
-            self.db.execute_query("CREATE INDEX IF NOT EXISTS idx_view_user_chat ON user_stats_daily (user_id, chat_id);")
+            self.db._execute_query_sync("CREATE INDEX IF NOT EXISTS idx_view_user_chat ON user_stats_daily (user_id, chat_id);")
 
             # 6. Add a refresh policy
-            self.db.execute_query("""
+            self.db._execute_query_sync("""
                     SELECT add_continuous_aggregate_policy('user_stats_daily',
                         start_offset => INTERVAL '7 days',
                         end_offset => INTERVAL '1 hour',
@@ -93,13 +93,13 @@ class SchemaManager:
                  PRIMARY KEY (id, ts)
             );
         """
-        self.db.execute_query(create_table_query)
+        self.db._execute_query_sync(create_table_query)
 
         # 2. Convert to hypertable
-        self.db.execute_query("SELECT create_hypertable('match_logs', 'ts', if_not_exists => TRUE);")
+        self.db._execute_query_sync("SELECT create_hypertable('match_logs', 'ts', if_not_exists => TRUE);")
 
         # 3. Create index for user_id and chat_id on raw table
-        self.db.execute_query("""
+        self.db._execute_query_sync("""
            CREATE INDEX IF NOT EXISTS idx_match_logs_user_chat ON match_logs (user_id_1, user_id_2, chat_id);
         """)
 
@@ -123,9 +123,9 @@ class SchemaManager:
             CONSTRAINT uq_user_chat UNIQUE (user_id, chat_id)
         );
         """
-        self.db.execute_query(create_table_query)
+        self.db._execute_query_sync(create_table_query)
 
-        self.db.execute_query("""
+        self.db._execute_query_sync("""
             CREATE INDEX IF NOT EXISTS idx_user_data_user_chat ON user_data (user_id, chat_id);
         """)
 
@@ -142,9 +142,9 @@ class SchemaManager:
             PRIMARY KEY (user_id, chat_id, log_date)
         );
         """
-        self.db.execute_query(create_table_query)
+        self.db._execute_query_sync(create_table_query)
 
-        self.db.execute_query("""
+        self.db._execute_query_sync("""
             CREATE INDEX IF NOT EXISTS idx_user_attendance_user_chat ON user_attendance (user_id, chat_id);
         """)
 
@@ -160,9 +160,9 @@ class SchemaManager:
             PRIMARY KEY (user_id, chat_id, number)
         );
         """
-        self.db.execute_query(create_table_query)
+        self.db._execute_query_sync(create_table_query)
 
-        self.db.execute_query("""
+        self.db._execute_query_sync("""
             CREATE INDEX IF NOT EXISTS idx_user_counts_user_chat ON user_number_counts (user_id, chat_id);
         """)
         logger.info("Table 'user_number_counts' initialized.")
@@ -178,9 +178,9 @@ class SchemaManager:
             PRIMARY KEY (user_id, chat_id, log_date, number)
         );
         """
-        self.db.execute_query(create_table_query)
+        self.db._execute_query_sync(create_table_query)
 
-        self.db.execute_query("""
+        self.db._execute_query_sync("""
             CREATE INDEX IF NOT EXISTS idx_user_daily_counts_user_chat_date ON user_daily_number_counts (user_id, chat_id, log_date);
         """)
         logger.info("Table 'user_daily_number_counts' initialized.")
@@ -198,9 +198,9 @@ class SchemaManager:
             PRIMARY KEY (chat_id, user_id_1, user_id_2, match_type)
         );
         """
-        self.db.execute_query(create_table_query)
+        self.db._execute_query_sync(create_table_query)
 
-        self.db.execute_query("""
+        self.db._execute_query_sync("""
             CREATE INDEX IF NOT EXISTS idx_match_counts_users_chat ON match_counts (user_id_1, user_id_2, chat_id);
         """)
         logger.info("Table 'match_counts' and its index initialized.")

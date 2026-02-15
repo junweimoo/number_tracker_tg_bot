@@ -2,6 +2,8 @@ import os
 import logging
 import psycopg2
 from psycopg2 import pool
+import asyncio
+from concurrent.futures import ThreadPoolExecutor
 
 logger = logging.getLogger(__name__)
 
@@ -15,6 +17,7 @@ class Database:
         
         self.connection_pool = None
         self._initialize_pool()
+        self.executor = ThreadPoolExecutor(max_workers=8)
 
     def _initialize_pool(self):
         try:
@@ -45,7 +48,7 @@ class Database:
             self.connection_pool.closeall()
             print("PostgreSQL connection pool is closed")
 
-    def execute_query(self, query, params=None):
+    def _execute_query_sync(self, query, params=None):
         connection = self.get_connection()
         cursor = connection.cursor()
         try:
@@ -60,7 +63,11 @@ class Database:
             cursor.close()
             self.release_connection(connection)
 
-    def fetch_one(self, query, params=None):
+    async def execute_query(self, query, params=None):
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(self.executor, self._execute_query_sync, query, params)
+
+    def _fetch_one_sync(self, query, params=None):
         connection = self.get_connection()
         cursor = connection.cursor()
         try:
@@ -76,7 +83,11 @@ class Database:
             cursor.close()
             self.release_connection(connection)
 
-    def fetch_all(self, query, params=None):
+    async def fetch_one(self, query, params=None):
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(self.executor, self._fetch_one_sync, query, params)
+
+    def _fetch_all_sync(self, query, params=None):
         connection = self.get_connection()
         cursor = connection.cursor()
         try:
@@ -92,7 +103,11 @@ class Database:
             cursor.close()
             self.release_connection(connection)
 
-    def execute_transaction(self, queries_with_params):
+    async def fetch_all(self, query, params=None):
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(self.executor, self._fetch_all_sync, query, params)
+
+    def _execute_transaction_sync(self, queries_with_params):
         """
         Executes multiple queries in a single atomic transaction.
         queries_with_params: List of tuples (query, params)
@@ -111,3 +126,7 @@ class Database:
         finally:
             cursor.close()
             self.release_connection(connection)
+
+    async def execute_transaction(self, queries_with_params):
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(self.executor, self._execute_transaction_sync, queries_with_params)

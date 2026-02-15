@@ -22,7 +22,7 @@ class MatchLogRepository:
         DO UPDATE SET count = match_counts.count + 1
         """
 
-    def get_top_matches(self, user_id, chat_id, limit=3):
+    async def get_top_matches(self, user_id, chat_id, limit=3):
         query = """
         SELECT 
             CASE 
@@ -36,9 +36,9 @@ class MatchLogRepository:
         ORDER BY total_matches DESC
         LIMIT %s
         """
-        return self.db.fetch_all(query, (user_id, chat_id, user_id, user_id, limit))
+        return await self.db.fetch_all(query, (user_id, chat_id, user_id, user_id, limit))
 
-    def get_top_matched_pairs(self, chat_id, limit=3):
+    async def get_top_matched_pairs(self, chat_id, limit=3):
         query = """
         SELECT user_id_1, user_id_2, sum(count) as total_matches
         FROM match_counts
@@ -47,9 +47,9 @@ class MatchLogRepository:
         ORDER BY total_matches DESC
         LIMIT %s
         """
-        return self.db.fetch_all(query, (chat_id, limit))
+        return await self.db.fetch_all(query, (chat_id, limit))
 
-    def get_top_matched_pairs_daily(self, chat_id, date, timezone_str, limit=3):
+    async def get_top_matched_pairs_daily(self, chat_id, date, timezone_str, limit=3):
         query = """
         SELECT 
             LEAST(user_id_1, user_id_2) as u1, 
@@ -61,4 +61,4 @@ class MatchLogRepository:
         ORDER BY total_matches DESC
         LIMIT %s
         """
-        return self.db.fetch_all(query, (chat_id, timezone_str, date, limit))
+        return await self.db.fetch_all(query, (chat_id, timezone_str, date, limit))

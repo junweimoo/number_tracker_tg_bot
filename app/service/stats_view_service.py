@@ -20,7 +20,7 @@ class StatsViewService:
         """Fetches and formats the user's achievements."""
         try:
             query = "SELECT achievements FROM user_data WHERE user_id = %s AND chat_id = %s"
-            result = self.db.fetch_one(query, (user_id, chat_id))
+            result = await self.db.fetch_one(query, (user_id, chat_id))
             if result and result[0]:
                 achievement_ids = result[0].split(',')
                 achievement_emojis = []
@@ -49,7 +49,7 @@ class StatsViewService:
             # 1. Total count of numbers logged & 2. Overall mean
             count = 0
             average = 0
-            result = self.stats_repo.get_user_stats(user_id, chat_id)
+            result = await self.stats_repo.get_user_stats(user_id, chat_id)
             if result and result[0] is not None and result[0] > 0:
                 count = result[0]
                 total_sum = result[1]
@@ -57,14 +57,14 @@ class StatsViewService:
 
             # 3. Count of specific numbers: 0, 88, 100
             specific_numbers = [0, 88, 100]
-            specific_counts = self.stats_repo.get_specific_number_counts(user_id, chat_id, specific_numbers)
+            specific_counts = await self.stats_repo.get_specific_number_counts(user_id, chat_id, specific_numbers)
             counts_str = "No numbers recorded yet."
             if specific_counts:
                 counts_str = ", ".join([f"{num}: {cnt}" for num, cnt in specific_counts])
 
             # 4. Number with the highest count
             most_frequent_str = "N/A"
-            most_frequent_results = self.stats_repo.get_most_frequent_numbers(user_id, chat_id)
+            most_frequent_results = await self.stats_repo.get_most_frequent_numbers(user_id, chat_id)
             if most_frequent_results:
                 numbers = [str(row[0]) for row in most_frequent_results]
                 freq_count = most_frequent_results[0][1]
@@ -72,17 +72,17 @@ class StatsViewService:
 
             # 5. Top 3 matched users
             top_matches_str = "None"
-            top_matches = self.match_log_repo.get_top_matches(user_id, chat_id, limit=3)
+            top_matches = await self.match_log_repo.get_top_matches(user_id, chat_id, limit=3)
             if top_matches:
                 match_names = []
                 for match_user_id, match_count in top_matches:
-                    match_name = self.user_repo.get_user_name(match_user_id, chat_id)
+                    match_name = await self.user_repo.get_user_name(match_user_id, chat_id)
                     match_names.append(f"{match_name} ({match_count})")
                 top_matches_str = ", ".join(match_names)
 
             # 6. Attendance streak
             streak_query = self.user_repo.get_fetch_streak_query()
-            streak_result = self.db.fetch_one(streak_query, (user_id, chat_id))
+            streak_result = await self.db.fetch_one(streak_query, (user_id, chat_id))
             current_streak = streak_result[0] if streak_result else 0
 
             # 7. Achievements (Emojis only)
@@ -120,29 +120,29 @@ class StatsViewService:
             response_parts.append(replies.get("all_time_section", "\n--- All Time ---"))
 
             # 1. Top 3 users with highest counts
-            top_users = self.stats_repo.get_top_users_by_count(chat_id, limit=3)
+            top_users = await self.stats_repo.get_top_users_by_count(chat_id, limit=3)
             if top_users:
                 response_parts.append(replies.get("top_loggers_title", "Top Loggers:"))
                 for idx, (uid, count) in enumerate(top_users, 1):
-                    name = self.user_repo.get_user_name(uid, chat_id)
+                    name = await self.user_repo.get_user_name(uid, chat_id)
                     response_parts.append(f"{idx}. {name}: {count}")
             
             # 2. Top 3 matched pairs
-            top_pairs = self.match_log_repo.get_top_matched_pairs(chat_id, limit=3)
+            top_pairs = await self.match_log_repo.get_top_matched_pairs(chat_id, limit=3)
             if top_pairs:
                 response_parts.append(replies.get("top_matched_pairs_title", "\nTop Matched Pairs:"))
                 for idx, (u1, u2, count) in enumerate(top_pairs, 1):
-                    name1 = self.user_repo.get_user_name(u1, chat_id)
-                    name2 = self.user_repo.get_user_name(u2, chat_id)
+                    name1 = await self.user_repo.get_user_name(u1, chat_id)
+                    name2 = await self.user_repo.get_user_name(u2, chat_id)
                     response_parts.append(f"{idx}. {name1} & {name2}: {count}")
 
             # 3. Top 1 user for special numbers
             special_numbers = [0, 88, 100]
             special_stats = []
             for num in special_numbers:
-                top_user = self.stats_repo.get_top_user_for_number(chat_id, num)
+                top_user = await self.stats_repo.get_top_user_for_number(chat_id, num)
                 if top_user:
-                    name = self.user_repo.get_user_name(top_user[0], chat_id)
+                    name = await self.user_repo.get_user_name(top_user[0], chat_id)
                     special_stats.append(f"{num}: {name} ({top_user[1]})")
             
             if special_stats:
@@ -154,30 +154,30 @@ class StatsViewService:
             response_parts.append(daily_section_header)
 
             # 1. Top 3 users with highest counts (Daily)
-            top_users_daily = self.stats_repo.get_top_users_by_count_daily(chat_id, today, limit=3)
+            top_users_daily = await self.stats_repo.get_top_users_by_count_daily(chat_id, today, limit=3)
             if top_users_daily:
                 response_parts.append(replies.get("top_loggers_title", "Top Loggers:"))
                 for idx, (uid, count) in enumerate(top_users_daily, 1):
-                    name = self.user_repo.get_user_name(uid, chat_id)
+                    name = await self.user_repo.get_user_name(uid, chat_id)
                     response_parts.append(f"{idx}. {name}: {count}")
             else:
                 response_parts.append(replies.get("no_logs_today", "No logs today."))
 
             # 2. Top 3 matched pairs (Daily)
-            top_pairs_daily = self.match_log_repo.get_top_matched_pairs_daily(chat_id, today, tz_str, limit=3)
+            top_pairs_daily = await self.match_log_repo.get_top_matched_pairs_daily(chat_id, today, tz_str, limit=3)
             if top_pairs_daily:
                 response_parts.append(replies.get("top_matched_pairs_title", "\nTop Matched Pairs:"))
                 for idx, (u1, u2, count) in enumerate(top_pairs_daily, 1):
-                    name1 = self.user_repo.get_user_name(u1, chat_id)
-                    name2 = self.user_repo.get_user_name(u2, chat_id)
+                    name1 = await self.user_repo.get_user_name(u1, chat_id)
+                    name2 = await self.user_repo.get_user_name(u2, chat_id)
                     response_parts.append(f"{idx}. {name1} & {name2}: {count}")
 
             # 3. Top 1 user for special numbers (Daily)
             special_stats_daily = []
             for num in special_numbers:
-                top_user = self.stats_repo.get_top_user_for_number_daily(chat_id, num, today)
+                top_user = await self.stats_repo.get_top_user_for_number_daily(chat_id, num, today)
                 if top_user:
-                    name = self.user_repo.get_user_name(top_user[0], chat_id)
+                    name = await self.user_repo.get_user_name(top_user[0], chat_id)
                     special_stats_daily.append(f"{num}: {name} ({top_user[1]})")
             
             if special_stats_daily:

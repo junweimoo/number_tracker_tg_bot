@@ -30,10 +30,10 @@ class AchievementStrategy(ABC):
         self.db = db
 
     @abstractmethod
-    def check(self, message, number, cache_data, remaining_numbers) -> AchievementResult:
+    async def check(self, message, number, cache_data, remaining_numbers) -> AchievementResult:
         pass
 
-    def need_update(self, message, cache_data, achievement_type):
+    async def need_update(self, message, cache_data, achievement_type):
         user_info = cache_data.user_info_cache.get((message.user_id, message.chat_id))
         if user_info and user_info.achievements:
             if achievement_type.value in user_info.achievements.split(','):
@@ -41,7 +41,7 @@ class AchievementStrategy(ABC):
         
         # Fallback to DB
         query = "SELECT achievements FROM user_data WHERE user_id = %s AND chat_id = %s"
-        result = self.db.fetch_one(query, (message.user_id, message.chat_id))
+        result = await self.db.fetch_one(query, (message.user_id, message.chat_id))
         if result and result[0]:
             achievements_list = result[0].split(',')
             if achievement_type.value in achievements_list:
@@ -60,9 +60,9 @@ class AchievementStrategy(ABC):
         return f"Achievement Unlocked: {achievement_type.name} 🏆"
 
 class ObtainAllNumbersAchievementStrategy(AchievementStrategy):
-    def check(self, message, number, cache_data, remaining_numbers):
+    async def check(self, message, number, cache_data, remaining_numbers):
         if remaining_numbers is not None and len(remaining_numbers) == 0:
-            if self.need_update(message, cache_data, AchievementType.ALL_NUMBERS):
+            if await self.need_update(message, cache_data, AchievementType.ALL_NUMBERS):
                 reply_text = self.get_achievement_reply(AchievementType.ALL_NUMBERS)
                 return AchievementResult(AchievementType.ALL_NUMBERS, reply_text)
         return None
@@ -73,9 +73,9 @@ class GetSpecificNumberAchievementStrategy(AchievementStrategy):
         self.target_number = target_number
         self.achievement_type = achievement_type
 
-    def check(self, message, number, cache_data, remaining_numbers):
+    async def check(self, message, number, cache_data, remaining_numbers):
         if number == self.target_number:
-            if self.need_update(message, cache_data, self.achievement_type):
+            if await self.need_update(message, cache_data, self.achievement_type):
                 reply_text = self.get_achievement_reply(self.achievement_type)
                 return AchievementResult(self.achievement_type, reply_text)
         return None

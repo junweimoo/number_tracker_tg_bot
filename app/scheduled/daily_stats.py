@@ -18,14 +18,14 @@ class DailyStatsTask:
             yesterday_date = yesterday.date()
 
             # 1. Visualization of numbers obtained from the previous day
-            viz_buf = self.visualization_service.generate_number_count_visualization(
+            viz_buf = await self.visualization_service.generate_number_count_visualization(
                 self.chat_id, start_date=yesterday_date
             )
             if viz_buf:
                 await self.bot.send_photo(self.chat_id, viz_buf, caption=f"Numbers logged on {yesterday_date}")
 
             # 2. Timeseries plot of numbers logged from the previous 24 hours
-            ts_viz_buf = self.visualization_service.generate_time_series_visualization(
+            ts_viz_buf = await self.visualization_service.generate_time_series_visualization(
                 self.chat_id, hourly_buckets=True, buckets=24
             )
             if ts_viz_buf:
@@ -43,7 +43,7 @@ class DailyStatsTask:
             today_date = datetime.now().date()
 
             # Visualization of numbers obtained today
-            viz_buf = self.visualization_service.generate_number_count_visualization(
+            viz_buf = await self.visualization_service.generate_number_count_visualization(
                 self.chat_id, start_date=today_date
             )
 
