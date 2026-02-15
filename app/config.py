@@ -58,5 +58,13 @@ class Config:
         return self.data.get('attendance_replies', [])
 
     @property
+    def stats_replies(self):
+        return self.data.get('stats_replies', [])
+
+    @property
+    def leaderboard_replies(self):
+        return self.data.get('leaderboard_replies', {})
+
+    @property
     def achievement_text(self):
         return self.data.get('achievement_text', {})

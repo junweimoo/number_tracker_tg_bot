@@ -17,6 +17,12 @@
     "1": {"reaction": "\uD83D\uDE2D"},
     "99": {"reaction": "\uD83D\uDE22"}
   },
+  "achievement_text": {
+    "ALL_NUMBERS": {"text": "All Numbers Collected!", "emoji": "👑"},
+    "GET_NUMBER_0": {"text": "Obtained number 0!", "emoji": "🍌"},
+    "GET_NUMBER_88": {"text": "Obtained number 88!", "emoji": "🎱"},
+    "GET_NUMBER_100": {"text": "Obtained number 100!", "emoji": "💯"}
+  },
   "replies": {
     "reply_message": "I detected the number: {number}"
   },
@@ -50,10 +56,23 @@
     "{attendance}",
     "\uD83D\uDD25 Congrats on your {streak}-day streak!"
   ],
-  "achievement_text": {
-    "ALL_NUMBERS": {"text": "All Numbers Collected!", "emoji": "👑"},
-    "GET_NUMBER_0": {"text": "Obtained number 0!", "emoji": "🍌"},
-    "GET_NUMBER_88": {"text": "Obtained number 88!", "emoji": "🎱"},
-    "GET_NUMBER_100": {"text": "Obtained number 100!", "emoji": "💯"}
+  "stats_replies": [
+    "Stats for {name} in this chat:",
+    "Total numbers: {count}",
+    "Average: {average}",
+    "Counts: {counts}",
+    "Most frequent: {most_frequent}",
+    "Top matches: {top_matches}",
+    "Current Streak: {streak} days 🔥",
+    "Achievements: {achievements}"
+  ],
+  "leaderboard_replies": {
+    "header": "🏆 Leaderboard 🏆",
+    "all_time_section": "\n--- All Time ---",
+    "daily_section": "\n--- Today ({today}) ---",
+    "top_loggers_title": "Top Loggers:",
+    "top_matched_pairs_title": "\nTop Matched Pairs:",
+    "special_numbers_kings_title": "\nSpecial Numbers Kings:",
+    "no_logs_today": "No logs today."
   }
 }
