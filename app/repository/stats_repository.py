@@ -41,17 +41,17 @@ class StatsRepository:
 
     async def get_user_stats(self, user_id, chat_id):
         """
-        Fetches the total count and sum of numbers logged by a specific user.
+        Fetches the total count, sum, and unique count of numbers logged by a specific user.
 
         Args:
             user_id (int): The ID of the user.
             chat_id (int): The ID of the chat.
 
         Returns:
-            tuple: (total_count, total_sum)
+            tuple: (total_count, total_sum, unique_count)
         """
         query = """
-        SELECT sum(count), sum(number * count)
+        SELECT sum(count), sum(number * count), count(*)
         FROM user_number_counts
         WHERE user_id = %s AND chat_id = %s
         """

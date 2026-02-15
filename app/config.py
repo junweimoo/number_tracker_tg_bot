@@ -66,9 +66,19 @@ class Config:
         return self.data.get('stats_replies', [])
 
     @property
+    def profile_text(self):
+        return self.data.get('profile_text', [])
+
+    @property
     def leaderboard_replies(self):
         return self.data.get('leaderboard_replies', {})
 
     @property
     def achievement_text(self):
         return self.data.get('achievement_text', {})
+
+    @property
+    def scheduled_jobs(self):
+        return self.data.get('scheduled_jobs', {})
+
+

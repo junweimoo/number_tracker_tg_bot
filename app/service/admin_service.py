@@ -38,7 +38,7 @@ class AdminService:
     """
     Service for administrative tasks like invoking scheduled jobs and importing/exporting data.
     """
-    def __init__(self, bot, repositories, visualization_service, number_log_service, config, db=None):
+    def __init__(self, bot, repositories, visualization_service, number_log_service, stats_view_service, config, db=None):
         """
         Initializes the AdminService.
 
@@ -47,6 +47,7 @@ class AdminService:
             repositories (dict): Dictionary of repository instances.
             visualization_service: The visualization service.
             number_log_service: The number log service.
+            stats_view_service: The stats view service.
             config: Configuration object.
             db: Optional database connection.
         """
@@ -56,6 +57,7 @@ class AdminService:
         self.number_log_repository = repositories['number_log']
         self.visualization_service = visualization_service
         self.number_log_service = number_log_service
+        self.stats_view_service = stats_view_service
         self.config = config
         self.db = db
         self.schema_manager = SchemaManager(db) if db else None
@@ -69,11 +71,13 @@ class AdminService:
             job_name (str): The name of the job ('midnight_stats' or 'midday_stats').
         """
         logger.info(f"Invoking job {job_name} for chat {chat_id}")
+
         task = DailyStatsTask(
             self.bot,
             self.stats_repository,
             chat_id,
             self.visualization_service,
+            self.stats_view_service,
             self.config
         )
 

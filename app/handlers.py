@@ -97,7 +97,7 @@ async def stats_handler(message, ctx):
     async with lock:
         response = await service.get_user_stats_summary(message)
     
-    await bot.send_message(message.chat_id, response)
+    await bot.send_html(message.chat_id, response)
 
 async def leaderboard_handler(message, ctx):
     """
@@ -117,7 +117,7 @@ async def leaderboard_handler(message, ctx):
     async with lock:
         response = await service.get_leaderboard(message.chat_id)
 
-    await bot.send_message(message.chat_id, response)
+    await bot.send_html(message.chat_id, response)
 
 async def visualize_group_num_counts_handler(message, ctx):
     """

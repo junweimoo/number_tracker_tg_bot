@@ -89,7 +89,8 @@ async def main():
     visualization_service.set_bot(bot)
 
     # Initialize Admin Service
-    admin_service = AdminService(bot, repositories, visualization_service, number_log_service, config, db)
+    admin_service = AdminService(bot, repositories, visualization_service,
+                                 number_log_service, stats_view_service, config, db)
     context['admin_service'] = admin_service
 
     # Register Handlers
@@ -120,9 +121,23 @@ async def main():
     # Register Tasks
     stats_chat_ids = getattr(config, 'daily_stats_chat_ids', None)
     for chat_id in stats_chat_ids:
-        daily_stats_task = DailyStatsTask(bot, repositories['stats'], chat_id, visualization_service, config)
-        scheduler.register_recurring_job(daily_stats_task.run_midnight_stats, 0, 0, 0, tz)
-        scheduler.register_recurring_job(daily_stats_task.run_midday_stats, 13, 22, 0, tz)
+        jobs_config = config.scheduled_jobs
+        daily_stats_task = DailyStatsTask(bot, repositories['stats'], chat_id,
+                                          visualization_service, stats_view_service, config)
+
+        midnight_stats_config = jobs_config.get("midnight_stats")
+        scheduler.register_recurring_job(daily_stats_task.run_midnight_stats,
+                                         int(midnight_stats_config.get("h")),
+                                         int(midnight_stats_config.get("m")),
+                                         int(midnight_stats_config.get("s")),
+                                         tz)
+
+        midday_stats_config = jobs_config.get("midday_stats")
+        scheduler.register_recurring_job(daily_stats_task.run_midday_stats,
+                                         int(midday_stats_config.get("h")),
+                                         int(midday_stats_config.get("m")),
+                                         int(midday_stats_config.get("s")),
+                                         tz)
 
     # Start Scheduler
     scheduler.start_worker()

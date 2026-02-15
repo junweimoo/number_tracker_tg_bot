@@ -10,22 +10,29 @@
     "message_regex": "(\\d{1,3})\\s*%"
   },
   "hit_numbers": {
-    "0": {"reply": "Hit 0!", "reaction": "\uD83C\uDF4C"},
-    "100": {"reply": "Hit 100!", "reaction": "\uD83D\uDCAF"}
+    "0": {"reply": "\uD83C\uDF89 Congrats! /0", "reaction": "\uD83C\uDF4C"},
+    "88": {"reply": "\uD83C\uDF89 Congrats! /88", "reaction": "\uD83E\uDD60"},
+    "100": {"reply": "\uD83C\uDF89 Congrats! /100", "reaction": "\uD83D\uDCAF"}
   },
   "close_numbers": {
     "1": {"reaction": "\uD83D\uDE2D"},
+    "87": {"reaction": "\uD83D\uDE22"},
+    "89": {"reaction": "\uD83D\uDE22"},
     "99": {"reaction": "\uD83D\uDE22"}
   },
   "achievement_text": {
-    "ALL_NUMBERS": {"text": "All Numbers Collected!", "emoji": "👑"},
-    "GET_NUMBER_0": {"text": "Obtained number 0!", "emoji": "🍌"},
-    "GET_NUMBER_88": {"text": "Obtained number 88!", "emoji": "🎱"},
-    "GET_NUMBER_100": {"text": "Obtained number 100!", "emoji": "💯"}
+    "ALL_NUMBERS": {"text": "All Numbers Collected!", "emoji": "\uD83C\uDF08"},
+    "GET_NUMBER_0": {"text": "Obtained number 0!", "emoji": "\uD83C\uDF4C"},
+    "GET_NUMBER_88": {"text": "Obtained number 88!", "emoji": "\uD83E\uDD60"},
+    "GET_NUMBER_100": {"text": "Obtained number 100!", "emoji": "\uD83D\uDCAF"}
+  },
+  "scheduled_jobs": {
+    "midday_stats": {"h": "13", "m": "0", "s": "0"},
+    "midnight_stats": {"h": "0", "m": "0", "s": "0"}
   },
   "replies": {
     "reply_message": "I detected the number: {number}",
-    "new_day_message": "New day!"
+    "new_day_message": "\uD83E\uDD17 New day! \uD83E\uDD17"
   },
   "match_replies": {
     "SAME_NUMBER_LAST": "{u1} and {u2} matched!",
@@ -58,22 +65,41 @@
     "\uD83D\uDD25 Congrats on your {streak}-day streak!"
   ],
   "stats_replies": [
-    "Stats for {name} in this chat:",
-    "Total numbers: {count}",
-    "Average: {average}",
-    "Counts: {counts}",
-    "Most frequent: {most_frequent}",
-    "Top matches: {top_matches}",
-    "Current Streak: {streak} days 🔥",
-    "Achievements: {achievements}"
+    "<b>{name}'s Stats</b>",
+    "\n<b>Total tries:</b> {count}",
+    "<b>Average:</b> {average}%",
+    "<b>Numbers obtained:</b> {unique_count} of 101",
+    "\n<b>Special Nums:</b>",
+    "{counts}",
+    "\n<b>Most frequent:</b>",
+    "{most_frequent}",
+    "\n<b>Top matches:</b>",
+    "{top_matches}",
+    "\n<b>Current Streak:</b>",
+    "{streak} days \uD83D\uDD25",
+    "\n<b>Achievements:</b>",
+    "{achievements}"
+  ],
+  "profile_text": [
+    "\nTotal tries: {count}",
+    "Average: {average}%",
+    "Numbers obtained: {unique_count} of 101",
+    "\nSpecial Nums:",
+    "{counts}",
+    "\nMost frequent:",
+    "{most_frequent}",
+    "\nTop matches:",
+    "{top_matches}",
+    "\nCurrent Streak:",
+    "{streak} days"
   ],
   "leaderboard_replies": {
-    "header": "🏆 Leaderboard 🏆",
-    "all_time_section": "\n--- All Time ---",
-    "daily_section": "\n--- Today ({today}) ---",
-    "top_loggers_title": "Top Loggers:",
-    "top_matched_pairs_title": "\nTop Matched Pairs:",
-    "special_numbers_kings_title": "\nSpecial Numbers Kings:",
+    "header": "\uD83C\uDFC6 Leaderboard \uD83C\uDFC6",
+    "all_time_section": "\n<b>--- All Time ---</b>",
+    "daily_section": "\n<b>--- Today ({today}) ---</b>",
+    "top_loggers_title": "<b>Top Users:</b>",
+    "top_matched_pairs_title": "\n<b>Top Matched Pairs:</b>",
+    "special_numbers_kings_title": "\n<b>Special Numbers:</b>",
     "no_logs_today": "No logs today."
   }
 }

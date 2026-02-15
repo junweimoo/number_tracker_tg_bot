@@ -82,21 +82,24 @@ class StatsViewService:
         first_name = message.first_name
 
         try:
-            # 1. Total count of numbers logged & 2. Overall mean
+            # 1. Total count of numbers logged & 2. Overall mean & Unique count
             count = 0
             average = 0
+            unique_count = 0
             result = await self.stats_repo.get_user_stats(user_id, chat_id)
             if result and result[0] is not None and result[0] > 0:
                 count = result[0]
                 total_sum = result[1]
+                unique_count = result[2]
                 average = round(total_sum / count, 4)
 
-            # 3. Count of specific numbers: 0, 88, 100
-            specific_numbers = [0, 88, 100]
-            specific_counts = await self.stats_repo.get_specific_number_counts(user_id, chat_id, specific_numbers)
-            counts_str = "No numbers recorded yet."
-            if specific_counts:
-                counts_str = ", ".join([f"{num}: {cnt}" for num, cnt in specific_counts])
+            # 3. Count of specific numbers from config
+            hit_numbers = sorted([int(n) for n in self.config.hit_numbers.keys()])
+            specific_counts_raw = await self.stats_repo.get_specific_number_counts(user_id, chat_id, hit_numbers)
+            specific_counts_dict = {num: cnt for num, cnt in specific_counts_raw}
+            
+            counts_list = [f"{num} (Count: {specific_counts_dict.get(num, 0)})" for num in hit_numbers]
+            counts_str = "\n".join(counts_list) if counts_list else "_No numbers recorded yet._"
 
             # 4. Number with the highest count
             most_frequent_str = "N/A"
@@ -114,7 +117,7 @@ class StatsViewService:
                 for match_user_id, match_count in top_matches:
                     match_name = await self.user_repo.get_user_name(match_user_id, chat_id)
                     match_names.append(f"{match_name} ({match_count})")
-                top_matches_str = ", ".join(match_names)
+                top_matches_str = "\n".join(match_names)
 
             # 6. Attendance streak
             streak_query = self.user_repo.get_fetch_streak_query()
@@ -127,13 +130,14 @@ class StatsViewService:
             # Format the response using config
             stats_reply = "\n".join(self.config.stats_replies)
             return stats_reply.format(
-                name=first_name,
-                count=count,
-                average=average,
+                name=f"{first_name}",
+                count=f"{count}",
+                average=f"{average}",
+                unique_count=f"{unique_count}",
                 counts=counts_str,
                 most_frequent=most_frequent_str,
                 top_matches=top_matches_str,
-                streak=current_streak,
+                streak=f"{current_streak}",
                 achievements=achievements_str
             )
 

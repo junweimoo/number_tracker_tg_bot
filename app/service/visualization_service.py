@@ -6,8 +6,10 @@ import matplotlib.colors as mcolors
 import io
 import asyncio
 import networkx as nx
+import numpy as np
 from datetime import datetime, timedelta, timezone, date
 from matplotlib.gridspec import GridSpec
+from matplotlib.patches import Rectangle
 
 logger = logging.getLogger(__name__)
 
@@ -445,31 +447,66 @@ class VisualizationService:
             ax_text = fig.add_subplot(gs[:, 0])
             ax_text.axis('off')
             
-            # Fetch text stats
-            class MockMessage:
-                def __init__(self, uid, cid, name):
-                    self.user_id = uid
-                    self.chat_id = cid
-                    self.first_name = name
-            
-            mock_msg = MockMessage(user_id, chat_id, first_name)
-            stats_text = await self.stats_view_service.get_user_stats_summary(mock_msg)
-            
-            # 1. Remove the last line (achievements and stats)
-            stats_text_lines = stats_text.strip().split('\n')
-            if stats_text_lines:
-                stats_text = "\n".join(stats_text_lines[:-2])
-            
-            # Clean up the text (remove markdown-like bolding if any)
-            stats_text = stats_text.replace('*', '')
+            # Fetch data for text stats
+            count = 0
+            average = 0
+            unique_count = 0
+            result = await self.stats_repo.get_user_stats(user_id, chat_id)
+            if result and result[0] is not None and result[0] > 0:
+                count = result[0]
+                total_sum = result[1]
+                unique_count = result[2]
+                average = round(total_sum / count, 4)
+
+            hit_numbers = sorted([int(n) for n in self.config.hit_numbers.keys()])
+            specific_counts_raw = await self.stats_repo.get_specific_number_counts(user_id, chat_id, hit_numbers)
+            specific_counts_dict = {num: cnt for num, cnt in specific_counts_raw}
+            counts_list = [f"{num} (Count: {specific_counts_dict.get(num, 0)})" for num in hit_numbers]
+            counts_str = "\n".join(counts_list) if counts_list else "No numbers recorded yet."
+
+            most_frequent_str = "N/A"
+            most_frequent_results = await self.stats_repo.get_most_frequent_numbers(user_id, chat_id)
+            if most_frequent_results:
+                numbers = [str(row[0]) for row in most_frequent_results]
+                freq_count = most_frequent_results[0][1]
+                most_frequent_str = f"{', '.join(numbers)} (Count: {freq_count})"
+
+            top_matches_str = "None"
+            top_matches = await self.match_log_repo.get_top_matches(user_id, chat_id, limit=3)
+            if top_matches:
+                match_names = []
+                for match_user_id, match_count in top_matches:
+                    match_name = await self.user_repo.get_user_name(match_user_id, chat_id)
+                    match_names.append(f"{match_name} ({match_count})")
+                top_matches_str = "\n".join(match_names)
+
+            streak_query = self.user_repo.get_fetch_streak_query()
+            streak_result = await self.db.fetch_one(streak_query, (user_id, chat_id))
+            current_streak = streak_result[0] if streak_result else 0
+
+            achievements_str = await self.stats_view_service.get_user_achievements_emojis(user_id, chat_id)
+
+            # Format the response using config
+            profile_template = "\n".join(self.config.profile_text)
+            stats_text = profile_template.format(
+                name=f"{first_name}",
+                count=f"{count}",
+                average=f"{average}",
+                unique_count=f"{unique_count}",
+                counts=counts_str,
+                most_frequent=most_frequent_str,
+                top_matches=top_matches_str,
+                streak=f"{current_streak}",
+                achievements=achievements_str
+            )
             
             # Add Title
-            ax_text.text(0.1, 0.95, f"{first_name.upper()}",
+            ax_text.text(0, 1, f"{first_name.upper()}",
                          transform=ax_text.transAxes, ha='left', va='top',
                          fontsize=24, fontweight='bold', color='#228B22')
             
             # Add Stats Content
-            ax_text.text(0.1, 0.85, stats_text, 
+            ax_text.text(0, 0.92, stats_text,
                          transform=ax_text.transAxes, ha='left', va='top', 
                          fontsize=16, linespacing=2.0, color='#333333')
 
@@ -484,9 +521,36 @@ class VisualizationService:
             # 48 buckets of a day each = 48 days
             await self.generate_time_series_visualization(chat_id, user_id=user_id, hourly_buckets=False, buckets=48, ax=ax_time)
             
-            # Add overall border decoration to the figure
-            fig.patch.set_edgecolor('#228B22')
-            fig.patch.set_linewidth(10)
+            # --- Rainbow Border ---
+            # Create a rainbow gradient border using multiple rectangles
+            border_width = 0.015
+            ratio = 0.6
+            n_colors = 100
+            rainbow_cmap = plt.get_cmap('gist_rainbow')
+            
+            # Top border
+            for i in range(n_colors):
+                rect = Rectangle((i/n_colors, 1-border_width), 1/n_colors, border_width, 
+                                 transform=fig.transFigure, color=rainbow_cmap(i/n_colors), zorder=5)
+                fig.patches.append(rect)
+            
+            # Bottom border
+            for i in range(n_colors):
+                rect = Rectangle((i/n_colors, 0), 1/n_colors, border_width, 
+                                 transform=fig.transFigure, color=rainbow_cmap(1 - i/n_colors), zorder=5)
+                fig.patches.append(rect)
+                
+            # Left border
+            for i in range(n_colors):
+                rect = Rectangle((0, i/n_colors), border_width*ratio, 1/n_colors,
+                                 transform=fig.transFigure, color=rainbow_cmap(1 - i/n_colors), zorder=5)
+                fig.patches.append(rect)
+                
+            # Right border
+            for i in range(n_colors):
+                rect = Rectangle((1-border_width*ratio, i/n_colors), border_width*ratio, 1/n_colors,
+                                 transform=fig.transFigure, color=rainbow_cmap(i/n_colors), zorder=5)
+                fig.patches.append(rect)
 
             # Save to buffer
             buf = io.BytesIO()

@@ -7,7 +7,7 @@ class DailyStatsTask:
     """
     Scheduled task for generating and sending daily statistics to chats.
     """
-    def __init__(self, bot, stats_repository, chat_id, visualization_service, config):
+    def __init__(self, bot, stats_repository, chat_id, visualization_service, stats_view_service, config):
         """
         Initializes the DailyStatsTask.
 
@@ -16,12 +16,14 @@ class DailyStatsTask:
             stats_repository: The stats repository.
             chat_id (int): The ID of the chat to send stats to.
             visualization_service: The visualization service.
+            stats_view_service: The stats view service.
             config: Configuration object.
         """
         self.bot = bot
         self.stats_repository = stats_repository
         self.chat_id = chat_id
         self.visualization_service = visualization_service
+        self.stats_view_service = stats_view_service
         self.config = config
 
     async def run_midnight_stats(self):
@@ -35,7 +37,7 @@ class DailyStatsTask:
             yesterday_date = yesterday.date()
 
             # 1. Visualization of numbers obtained from the previous day
-            viz_buf = await self.visualization_service.generate_number_count_visualization(
+            viz_buf = await self.visualization_service.generate_number_count_visualization_grid(
                 self.chat_id, start_date=yesterday_date
             )
             if viz_buf:
@@ -48,7 +50,12 @@ class DailyStatsTask:
             if ts_viz_buf:
                 await self.bot.send_photo(self.chat_id, ts_viz_buf, caption=f"Activity in the past 24 hours")
 
-            # 3. Configurable message
+            # 3. Leaderboard
+            leaderboard_text = await self.stats_view_service.get_leaderboard(self.chat_id)
+            if leaderboard_text:
+                await self.bot.send_html(self.chat_id, leaderboard_text)
+
+            # 4. Configurable message
             await self.bot.send_message(self.chat_id, self.config.new_day_message)
                 
         except Exception as e:
@@ -64,7 +71,7 @@ class DailyStatsTask:
             today_date = datetime.now().date()
 
             # Visualization of numbers obtained today
-            viz_buf = await self.visualization_service.generate_number_count_visualization(
+            viz_buf = await self.visualization_service.generate_number_count_visualization_grid(
                 self.chat_id, start_date=today_date
             )
 

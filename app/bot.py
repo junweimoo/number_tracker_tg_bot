@@ -183,17 +183,41 @@ class TelegramBot:
                 except Exception as e:
                     logger.error(f"Error in message handler: {e}", exc_info=True)
 
-    async def send_message(self, chat_id, text):
+    async def send_message(self, chat_id, text, parse_mode=None):
         """
         Sends a message to a chat.
 
         Args:
             chat_id (int): The ID of the chat.
             text (str): The message text.
+            parse_mode (str, optional): The parse mode for the message (e.g., 'MarkdownV2', 'HTML').
         """
-        await self._make_request('sendMessage', {'chat_id': chat_id, 'text': text})
+        params = {'chat_id': chat_id, 'text': text}
+        if parse_mode:
+            params['parse_mode'] = parse_mode
+        await self._make_request('sendMessage', params)
 
-    async def send_reply(self, chat_id, message_id, text):
+    async def send_markdown(self, chat_id, text):
+        """
+        Sends a message with MarkdownV2 formatting.
+
+        Args:
+            chat_id (int): The ID of the chat.
+            text (str): The message text in MarkdownV2 format.
+        """
+        await self.send_message(chat_id, text, parse_mode='MarkdownV2')
+
+    async def send_html(self, chat_id, text):
+        """
+        Sends a message with MarkdownV2 formatting.
+
+        Args:
+            chat_id (int): The ID of the chat.
+            text (str): The message text in HTML format.
+        """
+        await self.send_message(chat_id, text, parse_mode='HTML')
+
+    async def send_reply(self, chat_id, message_id, text, parse_mode=None):
         """
         Sends a reply to a specific message.
 
@@ -201,13 +225,27 @@ class TelegramBot:
             chat_id (int): The ID of the chat.
             message_id (int): The ID of the message to reply to.
             text (str): The message text.
+            parse_mode (str, optional): The parse mode for the message.
         """
         params = {
             'chat_id': chat_id,
             'text': text,
             'reply_parameters': json.dumps({'message_id': message_id})
         }
+        if parse_mode:
+            params['parse_mode'] = parse_mode
         await self._make_request('sendMessage', params)
+
+    async def send_reply_markdown(self, chat_id, message_id, text):
+        """
+        Sends a reply with MarkdownV2 formatting.
+
+        Args:
+            chat_id (int): The ID of the chat.
+            message_id (int): The ID of the message to reply to.
+            text (str): The message text in MarkdownV2 format.
+        """
+        await self.send_reply(chat_id, message_id, text, parse_mode='MarkdownV2')
 
     async def set_message_reaction(self, chat_id, message_id, emoji):
         """
