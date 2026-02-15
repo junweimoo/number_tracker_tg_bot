@@ -130,9 +130,33 @@ async def leaderboard_handler(message, ctx):
 
     await bot.send_html(message.chat_id, response)
 
+async def my_remaining_nums_handler(message, ctx):
+    """
+    Handles the /myremainingnums command, providing a list of remaining numbers for users in the chat.
+
+    Args:
+        message: The message object.
+        ctx (dict): The context dictionary.
+    """
+    bot = ctx['bot']
+    service = ctx['stats_view_service']
+
+    lock_mgr = ctx['lock_manager']
+    lock = await lock_mgr.get_lock(message.chat_id)
+
+    async with lock:
+        start_time = time.perf_counter()
+
+        response = await service.get_user_nums_remaining_in_chat(message.chat_id, message.user_id)
+
+        duration = time.perf_counter() - start_time
+        logger.info(f"Fetched chat remaining numbers in {duration:.6f}s")
+
+    await bot.send_html(message.chat_id, response)
+
 async def visualize_group_num_counts_handler(message, ctx):
     """
-    Handles the /chatcountshist command, sending a bar chart of number frequencies for the chat.
+    Handles the /chatcounthist command, sending a bar chart of number frequencies for the chat.
 
     Args:
         message: The message object.
@@ -162,7 +186,7 @@ async def visualize_group_num_counts_handler(message, ctx):
 
 async def visualize_my_num_counts_handler(message, ctx):
     """
-    Handles the /mycountshist command, sending a bar chart of number frequencies for the user.
+    Handles the /mycounthist command, sending a bar chart of number frequencies for the user.
 
     Args:
         message: The message object.
@@ -192,7 +216,7 @@ async def visualize_my_num_counts_handler(message, ctx):
 
 async def visualize_group_num_counts_grid_handler(message, ctx):
     """
-    Handles the /chatcountsgrid command, sending a grid visualization of number frequencies for the chat.
+    Handles the /chatcountgrid command, sending a grid visualization of number frequencies for the chat.
 
     Args:
         message: The message object.
@@ -222,7 +246,7 @@ async def visualize_group_num_counts_grid_handler(message, ctx):
 
 async def visualize_my_num_counts_grid_handler(message, ctx):
     """
-    Handles the /mycountsgrid command, sending a grid visualization of number frequencies for the user.
+    Handles the /mycountgrid command, sending a grid visualization of number frequencies for the user.
 
     Args:
         message: The message object.
@@ -468,9 +492,13 @@ async def import_handler(message, ctx):
         return
 
     try:
-        await bot.send_message(message.chat_id, f"Starting import from {file_path} (clear_db={clear_db})...")
+        await bot.send_message(message.chat_id, f"Starting import (clear_db={clear_db})...")
+
+        start_time = time.perf_counter()
         count = await service.import_number_logs(file_path, clear_db=clear_db)
-        await bot.send_message(message.chat_id, f"Successfully imported {count} logs.")
+        duration = time.perf_counter() - start_time
+
+        await bot.send_message(message.chat_id, f"Successfully imported {count} logs in {duration:.4f}s.")
     except Exception as e:
         logger.error(f"Error importing logs: {e}", exc_info=True)
         await bot.send_message(message.chat_id, f"Error importing logs: {e}")

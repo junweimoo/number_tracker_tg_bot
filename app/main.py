@@ -7,6 +7,7 @@ from database.database_core import Database
 from database.database_schema import SchemaManager
 from handlers import (
     leaderboard_handler, start_handler, echo_handler, number_parser_handler, stats_handler,
+    my_remaining_nums_handler,
     visualize_group_time_series_handler, visualize_group_num_counts_handler, visualize_group_num_counts_grid_handler,
     visualize_my_time_series_handler, visualize_my_num_counts_handler, visualize_my_num_counts_grid_handler,
     visualize_chat_match_graph_handler, visualize_my_match_graph_handler, visualize_personal_profile_handler,
@@ -98,17 +99,18 @@ async def main():
     # Basic stats
     bot.register_command_handler('/stats', stats_handler)
     bot.register_command_handler('/leaderboard', leaderboard_handler)
+    bot.register_command_handler('/myremainingnums', my_remaining_nums_handler)
     bot.register_command_handler('/myprofile', visualize_personal_profile_handler)
 
     # Group visualizations
-    bot.register_command_handler('/chatcountshist', visualize_group_num_counts_handler)
-    bot.register_command_handler('/chatcountsgrid', visualize_group_num_counts_grid_handler)
+    bot.register_command_handler('/chatcounthist', visualize_group_num_counts_handler)
+    bot.register_command_handler('/chatcountgrid', visualize_group_num_counts_grid_handler)
     bot.register_command_handler('/chattimeseries', visualize_group_time_series_handler)
     bot.register_command_handler('/chatmatchgraph', visualize_chat_match_graph_handler)
     
     # Personal visualizations
-    bot.register_command_handler('/mycountshist', visualize_my_num_counts_handler)
-    bot.register_command_handler('/mycountsgrid', visualize_my_num_counts_grid_handler)
+    bot.register_command_handler('/mycounthist', visualize_my_num_counts_handler)
+    bot.register_command_handler('/mycountgrid', visualize_my_num_counts_grid_handler)
     bot.register_command_handler('/mytimeseries', visualize_my_time_series_handler)
     bot.register_command_handler('/mymatchgraph', visualize_my_match_graph_handler)
 

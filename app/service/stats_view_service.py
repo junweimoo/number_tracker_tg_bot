@@ -179,7 +179,7 @@ class StatsViewService:
             tz = timezone(timedelta(hours=tz_offset))
             tz_str = f"{'+' if tz_offset >= 0 else '-'}{abs(tz_offset):02}"
             today = datetime.now(tz).date()
-            special_numbers = [0, 88, 100]
+            special_numbers = self.config.hit_numbers.keys()
 
             # Prepare all coroutines for parallel execution
             tasks = [
@@ -281,3 +281,73 @@ class StatsViewService:
         except Exception as e:
             logger.error(f"Error generating leaderboard: {e}", exc_info=True)
             return "An error occurred while generating the leaderboard."
+
+    async def get_user_nums_remaining_in_chat(self, chat_id, user_id=None):
+        """
+        Queries the counts of numbers remaining for all users in the chat using the numbers_bitmap column
+        and returns a formatted text.
+
+        Args:
+            chat_id (int): The ID of the chat.
+            user_id (int, optional): The ID of a specific user. Defaults to None.
+
+        Returns:
+            str: A formatted string containing the remaining numbers for users.
+        """
+        try:
+            users_data = await self.user_repo.get_users_with_bitmap(chat_id, user_id)
+            if not users_data:
+                return "No user data found."
+
+            completed_users = []
+            remaining_users = {}
+
+            for user_name, numbers_bitmap in users_data:
+                if not numbers_bitmap:
+                    remaining_count = 101
+                    missing_numbers = list(range(101))
+                else:
+                    # Convert bitmap string to integer
+                    bitmap_int = int(numbers_bitmap, 2)
+                    
+                    # Check numbers 0-100
+                    missing_numbers = []
+                    mask = 1 << 127
+                    for i in range(101):
+                        if not mask & bitmap_int:
+                            missing_numbers.append(i)
+                        mask >>= 1
+                    
+                    remaining_count = len(missing_numbers)
+
+                if remaining_count == 0:
+                    completed_users.append(user_name)
+                else:
+                    if remaining_count not in remaining_users:
+                        remaining_users[remaining_count] = []
+                    
+                    user_entry = user_name
+                    if user_id or remaining_count < 10:
+                        missing_str = ", ".join(map(str, missing_numbers))
+                        user_entry += f" ({missing_str})"
+                    
+                    remaining_users[remaining_count].append(user_entry)
+
+            response_parts = [self.config.numbers_remaining_board.get("top_header")]
+
+            if completed_users:
+                response_parts.append(self.config.numbers_remaining_board.get("complete_header"))
+                for user in sorted(completed_users):
+                    response_parts.append(f"- {user}")
+
+            sorted_counts = sorted(remaining_users.keys())
+            for count in sorted_counts:
+                response_parts.append(self.config.numbers_remaining_board.get("others_header").format(count=count))
+                for user_entry in sorted(remaining_users[count]):
+                    response_parts.append(f"- {user_entry}")
+
+            return "\n".join(response_parts)
+
+        except Exception as e:
+            logger.error(f"Error generating remaining numbers view: {e}", exc_info=True)
+            return "An error occurred while fetching remaining numbers."

@@ -34,6 +34,10 @@ class Config:
         return self.data.get('tracked_chat_ids', [])
 
     @property
+    def silent_chat_ids(self):
+        return self.data.get('silent_chat_ids', [])
+
+    @property
     def hit_numbers(self):
         return self.data.get('hit_numbers', {})
 
@@ -80,5 +84,9 @@ class Config:
     @property
     def scheduled_jobs(self):
         return self.data.get('scheduled_jobs', {})
+
+    @property
+    def numbers_remaining_board(self):
+        return self.data.get('numbers_remaining_board', {})
 
 

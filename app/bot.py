@@ -158,6 +158,7 @@ class TelegramBot:
 
         logger.info(f"Received update: "
                     f"chat_id={message.chat_id}[{message.chat_title}], "
+                    f"thread_id={message.thread_id}, "
                     f"user_id={message.user_id}[{message.username}], "
                     f"text='{message.text}'")
 
@@ -263,7 +264,7 @@ class TelegramBot:
         }
         await self._make_request('setMessageReaction', json_data=json_data)
 
-    async def forward_message(self, from_chat_id, message_id, to_chat_id):
+    async def forward_message(self, from_chat_id, message_id, to_chat_id, thread_id=None):
         """
         Forwards a message from one chat to another.
 
@@ -271,12 +272,15 @@ class TelegramBot:
             from_chat_id (int): The ID of the source chat.
             message_id (int): The ID of the message to forward.
             to_chat_id (int): The ID of the destination chat.
+            thread_id (int, optional): The ID of the destination message thread.
         """
         params = {
             'chat_id': to_chat_id,
             'from_chat_id': from_chat_id,
             'message_id': message_id
         }
+        if thread_id:
+            params['message_thread_id'] = thread_id
         await self._make_request('forwardMessage', params)
 
     async def send_photo(self, chat_id, photo_buffer, caption=None):

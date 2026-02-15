@@ -1,6 +1,7 @@
 {
   "developer_user_ids": ["1662984841"],
   "tracked_chat_ids": ["-5146811831"],
+  "silent_chat_ids": [],
   "forwarding_chat_ids": {
     "-5146811831": ["-5079989154"]
   },
@@ -101,5 +102,10 @@
     "top_matched_pairs_title": "\n<b>Top Matched Pairs:</b>",
     "special_numbers_kings_title": "\n<b>Special Numbers:</b>",
     "no_logs_today": "No logs today."
+  },
+  "numbers_remaining_board": {
+    "top_header": "\uD83D\uDCCA <b>Progress Report</b>\n",
+    "completed_header": "<b>Hall of fame</b>",
+    "others_header": "<b>{count} numbers remaining</b>"
   }
 }

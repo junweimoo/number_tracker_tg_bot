@@ -669,7 +669,7 @@ class NumberLogService:
             logger.info(f"Logged number {number}, attendance, and count for user {message.user_id} in {duration:.6f}s")
 
             # --- Send Feedback (Reaction & Reply) ---
-            if self.bot:
+            if self.bot and str(message.chat_id) not in self.config.silent_chat_ids:
                 tasks = []
 
                 # Send last hit reaction
@@ -686,8 +686,8 @@ class NumberLogService:
                     _, _, hit_reply_text, _, forward_chat_ids, _ = hit
                     if hit_reply_text:
                         tasks.append(self.bot.send_reply(message.chat_id, message.message_id, hit_reply_text))
-                    for forward_chat_id in forward_chat_ids:
-                        tasks.append(self.bot.forward_message(message.chat_id, message.message_id, forward_chat_id))
+                    for forward_chat_id, forward_thread_id in forward_chat_ids:
+                        tasks.append(self.bot.forward_message(message.chat_id, message.message_id, forward_chat_id, forward_thread_id))
 
                 # Send match replies to the matched message IDs
                 for match in match_context.matches:

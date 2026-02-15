@@ -148,3 +148,21 @@ class UserRepository:
         """
         query = "SELECT user_name FROM user_data WHERE user_id = %s AND chat_id = %s"
         return query, (user_id, chat_id)
+
+    async def get_users_with_bitmap(self, chat_id, user_id=None):
+        """
+        Fetches users and their numbers_bitmap in a chat.
+
+        Args:
+            chat_id (int): The ID of the chat.
+            user_id (int, optional): The ID of a specific user. Defaults to None.
+
+        Returns:
+            list: A list of tuples containing user_name and numbers_bitmap.
+        """
+        if user_id:
+            query = "SELECT user_name, numbers_bitmap FROM user_data WHERE chat_id = %s AND user_id = %s"
+            return await self.db.fetch_all(query, (chat_id, user_id))
+        else:
+            query = "SELECT user_name, numbers_bitmap FROM user_data WHERE chat_id = %s"
+            return await self.db.fetch_all(query, (chat_id,))

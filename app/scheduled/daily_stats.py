@@ -70,7 +70,7 @@ class DailyStatsTask:
             logger.info(f"Running daily midday stats for chat {self.chat_id}...")
             today_date = datetime.now().date()
 
-            # Visualization of numbers obtained today
+            # 1. Visualization of numbers obtained today
             viz_buf = await self.visualization_service.generate_number_count_visualization_grid(
                 self.chat_id, start_date=today_date
             )
@@ -79,6 +79,11 @@ class DailyStatsTask:
                 await self.bot.send_photo(self.chat_id, viz_buf, caption=f"Numbers logged today ({today_date})")
             else:
                 logger.info(f"No stats found for chat {self.chat_id} on {today_date}")
+
+            # 2. Numbers remaining for all users in chat
+            nums_remaining_text = await self.stats_view_service.get_user_nums_remaining_in_chat(self.chat_id)
+            if nums_remaining_text:
+                await self.bot.send_html(self.chat_id, nums_remaining_text)
 
         except Exception as e:
             logger.error(f"Error running DailyStatsTask: {e}", exc_info=True)
