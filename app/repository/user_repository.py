@@ -72,6 +72,10 @@ class UserRepository:
         FROM user_data
         """
 
+    async def get_all_users_in_chat(self, chat_id):
+        query = "SELECT user_id, user_name FROM user_data WHERE chat_id = %s"
+        return await self.db.fetch_all(query, (chat_id,))
+
     async def get_user_name(self, user_id, chat_id):
         query = "SELECT user_name FROM user_data WHERE user_id = %s AND chat_id = %s"
         result = await self.db.fetch_one(query, (user_id, chat_id))

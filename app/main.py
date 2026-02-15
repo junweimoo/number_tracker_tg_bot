@@ -7,8 +7,10 @@ from database.database_core import Database
 from database.database_schema import SchemaManager
 from handlers import (
     leaderboard_handler, start_handler, echo_handler, number_parser_handler, stats_handler,
-    visualize_time_series_handler, visualize_num_counts_handler, invoke_job_handler,
-    export_handler, import_handler)
+    visualize_group_time_series_handler, visualize_group_num_counts_handler, visualize_group_num_counts_grid_handler,
+    visualize_my_time_series_handler, visualize_my_num_counts_handler, visualize_my_num_counts_grid_handler,
+    visualize_chat_match_graph_handler, visualize_my_match_graph_handler, visualize_personal_profile_handler,
+    invoke_job_handler, export_handler, import_handler)
 from service.number_log_service import NumberLogService
 from service.stats_view_service import StatsViewService
 from service.visualization_service import VisualizationService
@@ -63,6 +65,7 @@ async def main():
     number_log_service = NumberLogService(db, config, repositories, transaction_queue)
     stats_view_service = StatsViewService(db, config, repositories)
     visualization_service = VisualizationService(db, config, repositories)
+    visualization_service.set_stats_view_service(stats_view_service)
 
     # Initialize Scheduler
     scheduler = Scheduler()
@@ -86,10 +89,24 @@ async def main():
     context['admin_service'] = admin_service
 
     # Register Handlers
+
+    # Basic stats
     bot.register_command_handler('/stats', stats_handler)
     bot.register_command_handler('/leaderboard', leaderboard_handler)
-    bot.register_command_handler('/vizcounts', visualize_num_counts_handler)
-    bot.register_command_handler('/viztimeseries', visualize_time_series_handler)
+    bot.register_command_handler('/myprofile', visualize_personal_profile_handler)
+
+    # Group visualizations
+    bot.register_command_handler('/chatcountshist', visualize_group_num_counts_handler)
+    bot.register_command_handler('/chatcountsgrid', visualize_group_num_counts_grid_handler)
+    bot.register_command_handler('/chattimeseries', visualize_group_time_series_handler)
+    bot.register_command_handler('/chatmatchgraph', visualize_chat_match_graph_handler)
+    
+    # Personal visualizations
+    bot.register_command_handler('/mycountshist', visualize_my_num_counts_handler)
+    bot.register_command_handler('/mycountsgrid', visualize_my_num_counts_grid_handler)
+    bot.register_command_handler('/mytimeseries', visualize_my_time_series_handler)
+    bot.register_command_handler('/mymatchgraph', visualize_my_match_graph_handler)
+
     # Admin commands
     bot.register_command_handler('/invokejob', invoke_job_handler)
     bot.register_command_handler('/export', export_handler)

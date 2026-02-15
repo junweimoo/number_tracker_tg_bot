@@ -49,6 +49,24 @@ class MatchLogRepository:
         """
         return await self.db.fetch_all(query, (chat_id, limit))
 
+    async def get_all_matched_pairs(self, chat_id, user_id=None):
+        if user_id:
+            query = """
+            SELECT user_id_1, user_id_2, sum(count) as total_matches
+            FROM match_counts
+            WHERE chat_id = %s AND (user_id_1 = %s OR user_id_2 = %s)
+            GROUP BY user_id_1, user_id_2
+            """
+            return await self.db.fetch_all(query, (chat_id, user_id, user_id))
+        else:
+            query = """
+            SELECT user_id_1, user_id_2, sum(count) as total_matches
+            FROM match_counts
+            WHERE chat_id = %s
+            GROUP BY user_id_1, user_id_2
+            """
+            return await self.db.fetch_all(query, (chat_id,))
+
     async def get_top_matched_pairs_daily(self, chat_id, date, timezone_str, limit=3):
         query = """
         SELECT 

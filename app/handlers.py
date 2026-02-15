@@ -1,8 +1,16 @@
 import re
 import logging
 import os
+from datetime import datetime, timedelta, timezone
 
 logger = logging.getLogger(__name__)
+
+def _get_start_date(message_text, config):
+    if "alltime" in message_text:
+        return None
+    
+    tz = timezone(timedelta(hours=config.timezone_gmt))
+    return datetime.now(tz).date()
 
 async def start_handler(message, ctx):
     bot = ctx['bot']
@@ -66,23 +74,79 @@ async def leaderboard_handler(message, ctx):
 
     await bot.send_message(message.chat_id, response)
 
-async def visualize_num_counts_handler(message, ctx):
+async def visualize_group_num_counts_handler(message, ctx):
     bot = ctx['bot']
     service = ctx['visualization_service']
+    config = ctx['config']
+
+    start_date = _get_start_date(message.text, config)
 
     lock_mgr = ctx['lock_manager']
     lock = await lock_mgr.get_lock(message.chat_id)
 
     async with lock:
-        image_buf = await service.generate_number_count_visualization(message.chat_id)
+        image_buf = await service.generate_number_count_visualization(message.chat_id, start_date=start_date)
     
     if image_buf:
         await bot.send_photo(message.chat_id, image_buf, caption="Number Frequency Visualization")
     else:
         await bot.send_message(message.chat_id, "No data available for visualization.")
 
+async def visualize_my_num_counts_handler(message, ctx):
+    bot = ctx['bot']
+    service = ctx['visualization_service']
+    config = ctx['config']
 
-async def visualize_time_series_handler(message, ctx):
+    start_date = _get_start_date(message.text, config)
+
+    lock_mgr = ctx['lock_manager']
+    lock = await lock_mgr.get_lock(message.chat_id)
+
+    async with lock:
+        image_buf = await service.generate_number_count_visualization(message.chat_id, user_id=message.user_id, start_date=start_date)
+    
+    if image_buf:
+        await bot.send_photo(message.chat_id, image_buf, caption="Your Number Frequency Visualization")
+    else:
+        await bot.send_message(message.chat_id, "No data available for your visualization.")
+
+async def visualize_group_num_counts_grid_handler(message, ctx):
+    bot = ctx['bot']
+    service = ctx['visualization_service']
+    config = ctx['config']
+
+    start_date = _get_start_date(message.text, config)
+
+    lock_mgr = ctx['lock_manager']
+    lock = await lock_mgr.get_lock(message.chat_id)
+
+    async with lock:
+        image_buf = await service.generate_number_count_visualization_grid(message.chat_id, start_date=start_date)
+    
+    if image_buf:
+        await bot.send_photo(message.chat_id, image_buf, caption="Number Frequency Grid Visualization")
+    else:
+        await bot.send_message(message.chat_id, "No data available for visualization.")
+
+async def visualize_my_num_counts_grid_handler(message, ctx):
+    bot = ctx['bot']
+    service = ctx['visualization_service']
+    config = ctx['config']
+
+    start_date = _get_start_date(message.text, config)
+
+    lock_mgr = ctx['lock_manager']
+    lock = await lock_mgr.get_lock(message.chat_id)
+
+    async with lock:
+        image_buf = await service.generate_number_count_visualization_grid(message.chat_id, user_id=message.user_id, start_date=start_date)
+    
+    if image_buf:
+        await bot.send_photo(message.chat_id, image_buf, caption="Your Number Frequency Grid Visualization")
+    else:
+        await bot.send_message(message.chat_id, "No data available for your visualization.")
+
+async def visualize_group_time_series_handler(message, ctx):
     bot = ctx['bot']
     service = ctx['visualization_service']
 
@@ -96,6 +160,66 @@ async def visualize_time_series_handler(message, ctx):
         await bot.send_photo(message.chat_id, image_buf, caption="Time Series Visualization")
     else:
         await bot.send_message(message.chat_id, "No data available for visualization.")
+
+async def visualize_my_time_series_handler(message, ctx):
+    bot = ctx['bot']
+    service = ctx['visualization_service']
+
+    lock_mgr = ctx['lock_manager']
+    lock = await lock_mgr.get_lock(message.chat_id)
+
+    async with lock:
+        image_buf = await service.generate_time_series_visualization(message.chat_id, user_id=message.user_id)
+
+    if image_buf:
+        await bot.send_photo(message.chat_id, image_buf, caption="Your Time Series Visualization")
+    else:
+        await bot.send_message(message.chat_id, "No data available for your visualization.")
+
+async def visualize_chat_match_graph_handler(message, ctx):
+    bot = ctx['bot']
+    service = ctx['visualization_service']
+
+    lock_mgr = ctx['lock_manager']
+    lock = await lock_mgr.get_lock(message.chat_id)
+
+    async with lock:
+        image_buf = await service.generate_match_graph_visualization(message.chat_id)
+
+    if image_buf:
+        await bot.send_photo(message.chat_id, image_buf, caption="Chat Match Graph Visualization")
+    else:
+        await bot.send_message(message.chat_id, "No match data available for visualization.")
+
+async def visualize_my_match_graph_handler(message, ctx):
+    bot = ctx['bot']
+    service = ctx['visualization_service']
+
+    lock_mgr = ctx['lock_manager']
+    lock = await lock_mgr.get_lock(message.chat_id)
+
+    async with lock:
+        image_buf = await service.generate_match_graph_visualization(message.chat_id, user_id=message.user_id)
+
+    if image_buf:
+        await bot.send_photo(message.chat_id, image_buf, caption="Your Match Graph Visualization")
+    else:
+        await bot.send_message(message.chat_id, "No match data available for your visualization.")
+
+async def visualize_personal_profile_handler(message, ctx):
+    bot = ctx['bot']
+    service = ctx['visualization_service']
+
+    lock_mgr = ctx['lock_manager']
+    lock = await lock_mgr.get_lock(message.chat_id)
+
+    async with lock:
+        image_buf = await service.personal_stats_visualization(message.chat_id, message.user_id, message.first_name)
+
+    if image_buf:
+        await bot.send_photo(message.chat_id, image_buf, caption=f"Personal Profile for {message.first_name}")
+    else:
+        await bot.send_message(message.chat_id, "No data available for your profile.")
 
 async def invoke_job_handler(message, ctx):
     bot = ctx['bot']

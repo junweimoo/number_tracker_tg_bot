@@ -69,6 +69,15 @@ class StatsRepository:
         """
         return await self.db.fetch_all(query, (chat_id, limit))
 
+    async def get_user_total_counts(self, chat_id):
+        query = """
+        SELECT user_id, sum(count) as total_count
+        FROM user_number_counts
+        WHERE chat_id = %s
+        GROUP BY user_id
+        """
+        return await self.db.fetch_all(query, (chat_id,))
+
     async def get_top_users_by_count_daily(self, chat_id, date, limit=3):
         query = """
         SELECT user_id, sum(count) as total_count
