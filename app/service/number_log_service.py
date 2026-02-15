@@ -36,17 +36,51 @@ from service.achievements import (
 logger = logging.getLogger(__name__)
 
 class StreakInfo:
+    """
+    Represents streak information for a chat, including matches and hits.
+    """
     def __init__(self, matches=0, hits=0):
+        """
+        Initializes StreakInfo.
+
+        Args:
+            matches (int): Number of matches in the current streak.
+            hits (int): Number of hits in the current streak.
+        """
         self.matches = matches
         self.hits = hits
 
     @property
     def total(self):
+        """
+        Calculates the total streak count.
+
+        Returns:
+            int: The sum of matches and hits.
+        """
         return self.matches + self.hits
 
 class UserInfo:
+    """
+    Represents cached information about a user.
+    """
     def __init__(self, chat_id, thread_id, user_id, user_name, user_handle, numbers_bitmap=0,
                  last_login_date=None, current_streak=0, achievements=None, extend_info=None):
+        """
+        Initializes UserInfo.
+
+        Args:
+            chat_id (int): The ID of the chat.
+            thread_id (int): The ID of the thread.
+            user_id (int): The ID of the user.
+            user_name (str): The name of the user.
+            user_handle (str): The handle/username of the user.
+            numbers_bitmap (int): A bitmap representing numbers collected by the user.
+            last_login_date (date): The date of the user's last login/activity.
+            current_streak (int): The user's current attendance streak.
+            achievements (str): A comma-separated string of achievement IDs.
+            extend_info (str): Additional extended information.
+        """
         self.chat_id = chat_id
         self.thread_id = thread_id
         self.user_id = user_id
@@ -59,13 +93,37 @@ class UserInfo:
         self.extend_info = extend_info
 
 class CacheData:
+    """
+    A container for various caches used during number processing.
+    """
     def __init__(self, user_info_cache, user_log_cache, chat_log_cache):
+        """
+        Initializes CacheData.
+
+        Args:
+            user_info_cache (dict): Cache of UserInfo objects.
+            user_log_cache (dict): Cache of recent numbers logged by users.
+            chat_log_cache (dict): Cache of recent numbers logged in chats.
+        """
         self.user_info_cache = user_info_cache
         self.user_log_cache = user_log_cache
         self.chat_log_cache = chat_log_cache
 
 class NumberLogService:
+    """
+    Service responsible for processing logged numbers, handling matches, hits, streaks, and achievements.
+    """
     def __init__(self, db, config, repositories, transaction_queue=None, bot=None):
+        """
+        Initializes the NumberLogService.
+
+        Args:
+            db: The database connection.
+            config: Configuration object.
+            repositories (dict): Dictionary of repository instances.
+            transaction_queue: Optional queue for batching database transactions.
+            bot: Optional bot instance.
+        """
         self.db = db
         self.config = config
         self.bot = bot
@@ -146,6 +204,12 @@ class NumberLogService:
         self._precache_user_data()
 
     def set_bot(self, bot):
+        """
+        Sets the bot instance.
+
+        Args:
+            bot: The bot instance.
+        """
         self.bot = bot
 
     def _precache_user_data(self):
@@ -177,6 +241,17 @@ class NumberLogService:
             logger.error(f"Failed to precache user data: {e}")
 
     def _duplicate_check(self, message, number, ts):
+        """
+        Checks if the logged number is a duplicate within a short timeframe.
+
+        Args:
+            message: The message object.
+            number (int): The logged number.
+            ts (datetime): The timestamp of the log.
+
+        Returns:
+            bool: True if it's a duplicate, False otherwise.
+        """
         if str(message.user_id) in self.config.developer_user_ids:
             return False
         user_log_cache_key = (message.user_id, message.chat_id)
@@ -196,6 +271,16 @@ class NumberLogService:
         """
         Updates the user's streak and attendance if this is their first log of the day.
         Sends a reply with the updated streak info.
+
+        Args:
+            message: The message object.
+            today_date (date): Today's date.
+            yesterday_date (date): Yesterday's date.
+            user_name (str): The name of the user.
+            current_streak (int): The user's current streak.
+
+        Returns:
+            tuple: (streak_reply_text, actual_new_streak)
         """
         # A. Update user_data (idempotent)
         update_streak_query = self.user_repo.get_update_streak_query()
@@ -260,6 +345,13 @@ class NumberLogService:
             return None, current_streak
 
     def _update_user_info_cache(self, message, user_name):
+        """
+        Updates the user info cache with the latest user details.
+
+        Args:
+            message: The message object.
+            user_name (str): The name of the user.
+        """
         user_info_cache_key = (message.user_id, message.chat_id)
         if user_info_cache_key in self.user_info_cache:
             user_info = self.user_info_cache[user_info_cache_key]
@@ -275,6 +367,16 @@ class NumberLogService:
             )
 
     def _calculate_remaining_numbers(self, numbers_bitmap, number):
+        """
+        Calculates the remaining numbers to be collected and the updated bitmap.
+
+        Args:
+            numbers_bitmap (int): The current bitmap of collected numbers.
+            number (int): The newly logged number.
+
+        Returns:
+            tuple: (list of missing numbers, updated bitmap) or (None, original bitmap) if number already collected.
+        """
         current_mask = (1 << (127 - number))
         if not numbers_bitmap & current_mask:
             new_bitmap = numbers_bitmap | current_mask
@@ -288,6 +390,14 @@ class NumberLogService:
         return None, numbers_bitmap
 
     async def process_number(self, message, number):
+        """
+        Processes a logged number: checks for duplicates, updates attendance, 
+        checks for hits/matches/achievements, and updates the database and caches.
+
+        Args:
+            message: The message object containing the logged number.
+            number (int): The number being logged.
+        """
         try:
             start_time = time.perf_counter()
 

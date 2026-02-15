@@ -12,7 +12,19 @@ from matplotlib.gridspec import GridSpec
 logger = logging.getLogger(__name__)
 
 class VisualizationService:
+    """
+    Service responsible for generating various data visualizations and charts.
+    """
     def __init__(self, db, config, repositories, bot=None):
+        """
+        Initializes the VisualizationService.
+
+        Args:
+            db: The database connection.
+            config: Configuration object.
+            repositories (dict): Dictionary of repository instances.
+            bot: Optional bot instance.
+        """
         self.db = db
         self.config = config
         self.bot = bot
@@ -24,12 +36,36 @@ class VisualizationService:
         self.stats_view_service = None # Will be set later or injected
 
     def set_bot(self, bot):
+        """
+        Sets the bot instance.
+
+        Args:
+            bot: The bot instance.
+        """
         self.bot = bot
 
     def set_stats_view_service(self, service):
+        """
+        Sets the stats view service.
+
+        Args:
+            service: The stats view service instance.
+        """
         self.stats_view_service = service
 
     async def generate_number_count_visualization(self, chat_id, user_id=None, start_date=None, ax=None):
+        """
+        Generates a bar chart visualization of number frequencies.
+
+        Args:
+            chat_id (int): The ID of the chat.
+            user_id (int, optional): The ID of a specific user. Defaults to None.
+            start_date (date, optional): The start date for filtering data. Defaults to None.
+            ax (matplotlib.axes.Axes, optional): An existing axes object to plot on. Defaults to None.
+
+        Returns:
+            io.BytesIO or matplotlib.axes.Axes: A buffer containing the image or the axes object.
+        """
         try:
             if start_date:
                 data = await self.stats_repo.get_number_counts_since(chat_id, start_date, user_id)
@@ -87,6 +123,17 @@ class VisualizationService:
             return None
 
     async def generate_number_count_visualization_grid(self, chat_id, user_id=None, start_date=None):
+        """
+        Generates a grid-based visualization of number frequencies (0-100).
+
+        Args:
+            chat_id (int): The ID of the chat.
+            user_id (int, optional): The ID of a specific user. Defaults to None.
+            start_date (date, optional): The start date for filtering data. Defaults to None.
+
+        Returns:
+            io.BytesIO: A buffer containing the generated image.
+        """
         try:
             if start_date:
                 data = await self.stats_repo.get_number_counts_since(chat_id, start_date, user_id)
@@ -162,6 +209,19 @@ class VisualizationService:
             return None
 
     async def generate_time_series_visualization(self, chat_id, user_id=None, hourly_buckets=True, buckets=48, ax=None):
+        """
+        Generates a time series visualization of activity.
+
+        Args:
+            chat_id (int): The ID of the chat.
+            user_id (int, optional): The ID of a specific user. Defaults to None.
+            hourly_buckets (bool): Whether to use hourly buckets (True) or daily (False). Defaults to True.
+            buckets (int): The number of buckets (hours or days) to display. Defaults to 48.
+            ax (matplotlib.axes.Axes, optional): An existing axes object to plot on. Defaults to None.
+
+        Returns:
+            io.BytesIO or matplotlib.axes.Axes: A buffer containing the image or the axes object.
+        """
         try:
             # Set style
             plt.style.use('seaborn-v0_8-pastel')
@@ -263,6 +323,18 @@ class VisualizationService:
             return None
 
     async def generate_match_graph_visualization(self, chat_id, user_id=None, start_date=None, ax=None):
+        """
+        Generates a network graph visualization of matches between users.
+
+        Args:
+            chat_id (int): The ID of the chat.
+            user_id (int, optional): The ID of a specific user to highlight. Defaults to None.
+            start_date (date, optional): The start date for filtering data. Defaults to None.
+            ax (matplotlib.axes.Axes, optional): An existing axes object to plot on. Defaults to None.
+
+        Returns:
+            io.BytesIO or matplotlib.axes.Axes: A buffer containing the image or the axes object.
+        """
         try:
             # 1. Fetch data
             user_counts = await self.stats_repo.get_user_total_counts(chat_id)
@@ -352,6 +424,17 @@ class VisualizationService:
             return None
 
     async def personal_stats_visualization(self, chat_id, user_id, first_name="User"):
+        """
+        Generates a comprehensive personal statistics visualization dashboard.
+
+        Args:
+            chat_id (int): The ID of the chat.
+            user_id (int): The ID of the user.
+            first_name (str): The first name of the user. Defaults to "User".
+
+        Returns:
+            io.BytesIO: A buffer containing the generated dashboard image.
+        """
         try:
             # Create a large figure with GridSpec
             fig = plt.figure(figsize=(20, 12), facecolor='#F5F5F5')

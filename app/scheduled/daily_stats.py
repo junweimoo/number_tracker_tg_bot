@@ -4,7 +4,20 @@ from datetime import datetime, timedelta
 logger = logging.getLogger(__name__)
 
 class DailyStatsTask:
+    """
+    Scheduled task for generating and sending daily statistics to chats.
+    """
     def __init__(self, bot, stats_repository, chat_id, visualization_service, config):
+        """
+        Initializes the DailyStatsTask.
+
+        Args:
+            bot: The bot instance.
+            stats_repository: The stats repository.
+            chat_id (int): The ID of the chat to send stats to.
+            visualization_service: The visualization service.
+            config: Configuration object.
+        """
         self.bot = bot
         self.stats_repository = stats_repository
         self.chat_id = chat_id
@@ -12,6 +25,10 @@ class DailyStatsTask:
         self.config = config
 
     async def run_midnight_stats(self):
+        """
+        Generates and sends statistics for the previous day at midnight.
+        Includes a bar chart of numbers logged and an activity time series.
+        """
         try:
             logger.info(f"Running daily midnight stats for chat {self.chat_id}...")
             yesterday = datetime.now() - timedelta(days=1)
@@ -38,6 +55,10 @@ class DailyStatsTask:
             logger.error(f"Error running DailyStatsTask: {e}", exc_info=True)
 
     async def run_midday_stats(self):
+        """
+        Generates and sends statistics for the current day at midday.
+        Includes a bar chart of numbers logged so far today.
+        """
         try:
             logger.info(f"Running daily midday stats for chat {self.chat_id}...")
             today_date = datetime.now().date()

@@ -9,7 +9,21 @@ from database.database_schema import SchemaManager
 logger = logging.getLogger(__name__)
 
 class SimulatedMessage:
+    """
+    A mock message object used to simulate Telegram messages during data import.
+    """
     def __init__(self, chat_id, thread_id, user_id, user_name, ts, message_id=0):
+        """
+        Initializes a SimulatedMessage.
+
+        Args:
+            chat_id (int): The ID of the chat.
+            thread_id (int): The ID of the thread.
+            user_id (int): The ID of the user.
+            user_name (str): The name of the user.
+            ts (datetime): The timestamp of the message.
+            message_id (int): The ID of the message. Defaults to 0.
+        """
         self.chat_id = chat_id
         self.thread_id = thread_id
         self.user_id = user_id
@@ -21,7 +35,21 @@ class SimulatedMessage:
         self.username = None
 
 class AdminService:
+    """
+    Service for administrative tasks like invoking scheduled jobs and importing/exporting data.
+    """
     def __init__(self, bot, repositories, visualization_service, number_log_service, config, db=None):
+        """
+        Initializes the AdminService.
+
+        Args:
+            bot: The bot instance.
+            repositories (dict): Dictionary of repository instances.
+            visualization_service: The visualization service.
+            number_log_service: The number log service.
+            config: Configuration object.
+            db: Optional database connection.
+        """
         self.bot = bot
         self.repositories = repositories
         self.stats_repository = repositories['stats']
@@ -33,6 +61,13 @@ class AdminService:
         self.schema_manager = SchemaManager(db) if db else None
 
     async def invoke_job(self, chat_id, job_name):
+        """
+        Manually triggers a scheduled job for a specific chat.
+
+        Args:
+            chat_id (int): The ID of the chat.
+            job_name (str): The name of the job ('midnight_stats' or 'midday_stats').
+        """
         logger.info(f"Invoking job {job_name} for chat {chat_id}")
         task = DailyStatsTask(
             self.bot,
@@ -50,6 +85,15 @@ class AdminService:
             raise ValueError(f"Unknown job name: {job_name}")
 
     async def export_number_logs(self, file_path):
+        """
+        Exports all number logs from the database to a CSV file.
+
+        Args:
+            file_path (str): The path to save the CSV file.
+
+        Returns:
+            int: The number of logs exported.
+        """
         logger.info(f"Exporting number logs to {file_path}")
         logs = await self.number_log_repository.get_all_logs()
         
@@ -63,6 +107,16 @@ class AdminService:
         return len(logs)
 
     async def import_number_logs(self, file_path, clear_db=False):
+        """
+        Imports number logs from a CSV file into the database.
+
+        Args:
+            file_path (str): The path to the CSV file.
+            clear_db (bool): Whether to clear the database before importing. Defaults to False.
+
+        Returns:
+            int: The number of logs imported.
+        """
         logger.info(f"Importing number logs from {file_path}, clear_db={clear_db}")
 
         if not os.path.exists(file_path):

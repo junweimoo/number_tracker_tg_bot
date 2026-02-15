@@ -4,7 +4,19 @@ from datetime import datetime, timezone, timedelta
 logger = logging.getLogger(__name__)
 
 class StatsViewService:
+    """
+    Service responsible for generating text-based statistics views and leaderboards.
+    """
     def __init__(self, db, config, repositories, bot=None):
+        """
+        Initializes the StatsViewService.
+
+        Args:
+            db: The database connection.
+            config: Configuration object.
+            repositories (dict): Dictionary of repository instances.
+            bot: Optional bot instance.
+        """
         self.db = db
         self.config = config
         self.bot = bot
@@ -14,10 +26,25 @@ class StatsViewService:
         self.user_repo = repositories['user']
 
     def set_bot(self, bot):
+        """
+        Sets the bot instance.
+
+        Args:
+            bot: The bot instance.
+        """
         self.bot = bot
 
     async def get_user_achievements_emojis(self, user_id, chat_id):
-        """Fetches and formats the user's achievements."""
+        """
+        Fetches and formats the user's achievements as a string of emojis.
+
+        Args:
+            user_id (int): The ID of the user.
+            chat_id (int): The ID of the chat.
+
+        Returns:
+            str: A string containing achievement emojis.
+        """
         try:
             query = "SELECT achievements FROM user_data WHERE user_id = %s AND chat_id = %s"
             result = await self.db.fetch_one(query, (user_id, chat_id))
@@ -41,6 +68,15 @@ class StatsViewService:
             return ""
 
     async def get_user_stats_summary(self, message):
+        """
+        Generates a summary of statistics for a specific user.
+
+        Args:
+            message: The message object containing user and chat information.
+
+        Returns:
+            str: A formatted string containing the user's statistics summary.
+        """
         user_id = message.user_id
         chat_id = message.chat_id
         first_name = message.first_name
@@ -106,6 +142,15 @@ class StatsViewService:
             return "An error occurred while fetching your stats."
 
     async def get_leaderboard(self, chat_id):
+        """
+        Generates a leaderboard for the chat, including all-time and daily statistics.
+
+        Args:
+            chat_id (int): The ID of the chat.
+
+        Returns:
+            str: A formatted string containing the leaderboard.
+        """
         try:
             replies = self.config.leaderboard_replies
             response_parts = [replies.get("header", "🏆 Leaderboard 🏆")]

@@ -25,6 +25,10 @@ from utils.scheduler import Scheduler
 from scheduled.daily_stats import DailyStatsTask
 
 async def main():
+    """
+    The main entry point for the application.
+    Initializes configurations, database, services, repositories, and starts the bot.
+    """
     # Initialize env variables
     TOKEN = os.environ.get("BOT_TOKEN")
     if not TOKEN:

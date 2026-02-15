@@ -3,7 +3,16 @@ import logging
 logger = logging.getLogger(__name__)
 
 class SchemaManager:
+    """
+    Manages the database schema, including table creation, indexing, and TimescaleDB hypertables.
+    """
     def __init__(self, db):
+        """
+        Initializes the SchemaManager.
+
+        Args:
+            db: The database connection.
+        """
         self.db = db
 
     def init_db(self):
@@ -36,6 +45,7 @@ class SchemaManager:
                 logger.error(f"Failed to truncate table '{table}': {e}")
 
     def init_number_logs(self):
+        """Initializes the number_logs table and its associated TimescaleDB hypertable and aggregates."""
         # 1. Create the base table
         create_table_query = """
             CREATE TABLE IF NOT EXISTS number_logs 
@@ -93,6 +103,7 @@ class SchemaManager:
             logger.error(f"Note on continuous aggregate creation: {e}")
 
     def init_match_logs(self):
+        """Initializes the match_logs table and its associated TimescaleDB hypertable."""
         #1. Create the base table
         create_table_query = """
             CREATE TABLE IF NOT EXISTS match_logs
@@ -124,6 +135,7 @@ class SchemaManager:
         logger.info("Table 'match_logs' and its index initialized.")
 
     def init_user_data(self):
+        """Initializes the user_data table for storing user profiles and achievements."""
         create_table_query = """
         CREATE TABLE IF NOT EXISTS user_data 
         (
@@ -150,6 +162,7 @@ class SchemaManager:
         logger.info("Table 'user_data' and its index initialized.")
 
     def init_user_attendance(self):
+        """Initializes the user_attendance table for tracking daily activity."""
         # Create user_attendance table for tracking daily activity
         create_table_query = """
         CREATE TABLE IF NOT EXISTS user_attendance (
@@ -169,6 +182,7 @@ class SchemaManager:
         logger.info("Table 'user_attendance' and its index initialized.")
 
     def init_user_number_counts(self):
+        """Initializes the user_number_counts table for storing total counts of each number per user."""
         create_table_query = """
         CREATE TABLE IF NOT EXISTS user_number_counts (
             user_id     BIGINT NOT NULL,
@@ -186,6 +200,7 @@ class SchemaManager:
         logger.info("Table 'user_number_counts' initialized.")
 
     def init_user_daily_number_counts(self):
+        """Initializes the user_daily_number_counts table for storing daily counts of each number per user."""
         create_table_query = """
         CREATE TABLE IF NOT EXISTS user_daily_number_counts (
             user_id     BIGINT NOT NULL,
@@ -204,6 +219,7 @@ class SchemaManager:
         logger.info("Table 'user_daily_number_counts' initialized.")
 
     def init_match_counts(self):
+        """Initializes the match_counts table for storing total match counts between user pairs."""
         create_table_query = """
         CREATE TABLE IF NOT EXISTS match_counts (
             id           SERIAL,

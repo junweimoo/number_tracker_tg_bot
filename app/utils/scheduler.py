@@ -5,7 +5,16 @@ from datetime import datetime, timedelta, timezone
 logger = logging.getLogger(__name__)
 
 class Scheduler:
+    """
+    A simple task scheduler for running one-time and recurring jobs.
+    """
     def __init__(self, executor=None):
+        """
+        Initializes the Scheduler.
+
+        Args:
+            executor: Optional executor for running jobs in a separate thread/process.
+        """
         self.jobs = []
         self.recurring_jobs = []
         self.running = False
@@ -16,10 +25,11 @@ class Scheduler:
         """
         Registers a one-time job to be run at a specific time.
 
-        :param func: The async function to execute. It should accept 'context' as an argument if context is provided.
-        :param run_time: A datetime object specifying when to run the job.
-        :param context: Optional context dictionary to pass to the function.
-        :param is_recurring: whether the task is recurring
+        Args:
+            func: The async function to execute.
+            run_time (datetime): A datetime object specifying when to run the job.
+            context (dict, optional): Optional context dictionary to pass to the function.
+            is_recurring (bool): Whether the task is recurring. Defaults to False.
         """
         self.jobs.append({
             'func': func,
@@ -34,12 +44,13 @@ class Scheduler:
         """
         Registers a recurring job to be run daily at a specific time.
         
-        :param func: The async function to execute.
-        :param hour: Hour (0-23)
-        :param minute: Minute (0-59)
-        :param second: Second (0-59)
-        :param tz: Timezone object (e.g., timezone.utc or timezone(timedelta(hours=8)))
-        :param context: Optional context dictionary to pass to the function.
+        Args:
+            func: The async function to execute.
+            hour (int): Hour (0-23).
+            minute (int): Minute (0-59).
+            second (int): Second (0-59).
+            tz (timezone): Timezone object.
+            context (dict, optional): Optional context dictionary to pass to the function.
         """
         self.recurring_jobs.append({
             'func': func,
@@ -55,6 +66,12 @@ class Scheduler:
         self._schedule_next_run(self.recurring_jobs[-1])
 
     def _schedule_next_run(self, job_config):
+        """
+        Schedules the next execution of a recurring job.
+
+        Args:
+            job_config (dict): The configuration of the recurring job.
+        """
         now = datetime.now(job_config['tz'])
         target_time = now.replace(
             hour=job_config['hour'], 
@@ -83,12 +100,12 @@ class Scheduler:
         self.register_job(recurring_wrapper, target_time_naive, job_config['context'], True)
 
     def start_worker(self):
-        """Starts the background worker."""
+        """Starts the background worker task."""
         self._worker_task = asyncio.create_task(self._worker())
         logger.info("Scheduler worker started.")
 
     async def stop_worker(self):
-        """Stops the scheduler."""
+        """Stops the scheduler worker task."""
         self.running = False
         if self._worker_task:
             self._worker_task.cancel()
@@ -100,7 +117,7 @@ class Scheduler:
 
 
     async def _worker(self):
-        """Starts the scheduler loop."""
+        """The main worker loop that checks for and executes due jobs."""
         self.running = True
         logger.info("Scheduler started.")
         while self.running:

@@ -6,6 +6,16 @@ from datetime import datetime, timedelta, timezone
 logger = logging.getLogger(__name__)
 
 def _get_start_date(message_text, config):
+    """
+    Determines the start date for filtering data based on the message text.
+
+    Args:
+        message_text (str): The text of the message.
+        config: Configuration object.
+
+    Returns:
+        date: The start date, or None if 'alltime' is specified.
+    """
     if "alltime" in message_text:
         return None
     
@@ -13,14 +23,35 @@ def _get_start_date(message_text, config):
     return datetime.now(tz).date()
 
 async def start_handler(message, ctx):
+    """
+    Handles the /start command.
+
+    Args:
+        message: The message object.
+        ctx (dict): The context dictionary.
+    """
     bot = ctx['bot']
     await bot.send_message(message.chat_id, "Hello! I am your bot.")
 
 async def echo_handler(message, ctx):
+    """
+    Echoes back the user's message.
+
+    Args:
+        message: The message object.
+        ctx (dict): The context dictionary.
+    """
     bot = ctx['bot']
     await bot.send_message(message.chat_id, f"You said: {message.text}")
 
 async def number_parser_handler(message, ctx):
+    """
+    Parses numbers from incoming messages and processes them if they match the configured regex.
+
+    Args:
+        message: The message object.
+        ctx (dict): The context dictionary.
+    """
     config = ctx['config']
 
     if str(message.chat_id) not in config.tracked_chat_ids:
@@ -49,6 +80,13 @@ async def number_parser_handler(message, ctx):
             pass
 
 async def stats_handler(message, ctx):
+    """
+    Handles the /stats command, providing a summary of the user's statistics.
+
+    Args:
+        message: The message object.
+        ctx (dict): The context dictionary.
+    """
     bot = ctx['bot']
 
     service = ctx['stats_view_service']
@@ -62,6 +100,13 @@ async def stats_handler(message, ctx):
     await bot.send_message(message.chat_id, response)
 
 async def leaderboard_handler(message, ctx):
+    """
+    Handles the /leaderboard command, providing the chat's leaderboard.
+
+    Args:
+        message: The message object.
+        ctx (dict): The context dictionary.
+    """
     bot = ctx['bot']
 
     service = ctx['stats_view_service']
@@ -75,6 +120,13 @@ async def leaderboard_handler(message, ctx):
     await bot.send_message(message.chat_id, response)
 
 async def visualize_group_num_counts_handler(message, ctx):
+    """
+    Handles the /chatcountshist command, sending a bar chart of number frequencies for the chat.
+
+    Args:
+        message: The message object.
+        ctx (dict): The context dictionary.
+    """
     bot = ctx['bot']
     service = ctx['visualization_service']
     config = ctx['config']
@@ -93,6 +145,13 @@ async def visualize_group_num_counts_handler(message, ctx):
         await bot.send_message(message.chat_id, "No data available for visualization.")
 
 async def visualize_my_num_counts_handler(message, ctx):
+    """
+    Handles the /mycountshist command, sending a bar chart of number frequencies for the user.
+
+    Args:
+        message: The message object.
+        ctx (dict): The context dictionary.
+    """
     bot = ctx['bot']
     service = ctx['visualization_service']
     config = ctx['config']
@@ -111,6 +170,13 @@ async def visualize_my_num_counts_handler(message, ctx):
         await bot.send_message(message.chat_id, "No data available for your visualization.")
 
 async def visualize_group_num_counts_grid_handler(message, ctx):
+    """
+    Handles the /chatcountsgrid command, sending a grid visualization of number frequencies for the chat.
+
+    Args:
+        message: The message object.
+        ctx (dict): The context dictionary.
+    """
     bot = ctx['bot']
     service = ctx['visualization_service']
     config = ctx['config']
@@ -129,6 +195,13 @@ async def visualize_group_num_counts_grid_handler(message, ctx):
         await bot.send_message(message.chat_id, "No data available for visualization.")
 
 async def visualize_my_num_counts_grid_handler(message, ctx):
+    """
+    Handles the /mycountsgrid command, sending a grid visualization of number frequencies for the user.
+
+    Args:
+        message: The message object.
+        ctx (dict): The context dictionary.
+    """
     bot = ctx['bot']
     service = ctx['visualization_service']
     config = ctx['config']
@@ -147,6 +220,13 @@ async def visualize_my_num_counts_grid_handler(message, ctx):
         await bot.send_message(message.chat_id, "No data available for your visualization.")
 
 async def visualize_group_time_series_handler(message, ctx):
+    """
+    Handles the /chattimeseries command, sending a time series visualization of chat activity.
+
+    Args:
+        message: The message object.
+        ctx (dict): The context dictionary.
+    """
     bot = ctx['bot']
     service = ctx['visualization_service']
 
@@ -162,6 +242,13 @@ async def visualize_group_time_series_handler(message, ctx):
         await bot.send_message(message.chat_id, "No data available for visualization.")
 
 async def visualize_my_time_series_handler(message, ctx):
+    """
+    Handles the /mytimeseries command, sending a time series visualization of the user's activity.
+
+    Args:
+        message: The message object.
+        ctx (dict): The context dictionary.
+    """
     bot = ctx['bot']
     service = ctx['visualization_service']
 
@@ -177,6 +264,13 @@ async def visualize_my_time_series_handler(message, ctx):
         await bot.send_message(message.chat_id, "No data available for your visualization.")
 
 async def visualize_chat_match_graph_handler(message, ctx):
+    """
+    Handles the /chatmatchgraph command, sending a network graph of user matches in the chat.
+
+    Args:
+        message: The message object.
+        ctx (dict): The context dictionary.
+    """
     bot = ctx['bot']
     service = ctx['visualization_service']
 
@@ -192,6 +286,13 @@ async def visualize_chat_match_graph_handler(message, ctx):
         await bot.send_message(message.chat_id, "No match data available for visualization.")
 
 async def visualize_my_match_graph_handler(message, ctx):
+    """
+    Handles the /mymatchgraph command, sending a network graph of matches for the user.
+
+    Args:
+        message: The message object.
+        ctx (dict): The context dictionary.
+    """
     bot = ctx['bot']
     service = ctx['visualization_service']
 
@@ -207,6 +308,13 @@ async def visualize_my_match_graph_handler(message, ctx):
         await bot.send_message(message.chat_id, "No match data available for your visualization.")
 
 async def visualize_personal_profile_handler(message, ctx):
+    """
+    Handles the /myprofile command, sending a comprehensive personal statistics dashboard.
+
+    Args:
+        message: The message object.
+        ctx (dict): The context dictionary.
+    """
     bot = ctx['bot']
     service = ctx['visualization_service']
 
@@ -222,6 +330,13 @@ async def visualize_personal_profile_handler(message, ctx):
         await bot.send_message(message.chat_id, "No data available for your profile.")
 
 async def invoke_job_handler(message, ctx):
+    """
+    Handles the /invokejob command for administrative tasks.
+
+    Args:
+        message: The message object.
+        ctx (dict): The context dictionary.
+    """
     bot = ctx['bot']
     config = ctx['config']
     
@@ -247,6 +362,13 @@ async def invoke_job_handler(message, ctx):
         await bot.send_message(message.chat_id, f"Error invoking job {job_name}.")
 
 async def export_handler(message, ctx):
+    """
+    Handles the /export command for exporting number logs.
+
+    Args:
+        message: The message object.
+        ctx (dict): The context dictionary.
+    """
     bot = ctx['bot']
     config = ctx['config']
     
@@ -265,6 +387,13 @@ async def export_handler(message, ctx):
         await bot.send_message(message.chat_id, f"Error exporting logs: {e}")
 
 async def import_handler(message, ctx):
+    """
+    Handles the /import command for importing number logs.
+
+    Args:
+        message: The message object.
+        ctx (dict): The context dictionary.
+    """
     bot = ctx['bot']
     config = ctx['config']
     

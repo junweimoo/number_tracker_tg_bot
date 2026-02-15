@@ -15,7 +15,16 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 class Message:
+    """
+    Represents a Telegram message with relevant fields extracted from the update.
+    """
     def __init__(self, update):
+        """
+        Initializes a Message object from a Telegram update dictionary.
+
+        Args:
+            update (dict): The update dictionary from Telegram API.
+        """
         self.update_id = update.get('update_id')
 
         message_data = update.get('message', {})
@@ -39,7 +48,17 @@ class Message:
         return f"<Message chat_id={self.chat_id} user_id={self.user_id} text='{self.text}'>"
 
 class TelegramBot:
+    """
+    A simple Telegram bot implementation using polling.
+    """
     def __init__(self, token, context=None):
+        """
+        Initializes the TelegramBot.
+
+        Args:
+            token (str): The Telegram bot token.
+            context (dict, optional): Context dictionary to share data between handlers.
+        """
         self.token = token
         self.base_url = f"https://api.telegram.org/bot{token}/"
         self.command_handlers = {}
@@ -51,15 +70,36 @@ class TelegramBot:
         self.context['lock_manager'] = ChatLockManager()
 
     def register_command_handler(self, command, handler):
-        """Registers a handler for a specific command (e.g., '/start')."""
+        """
+        Registers a handler for a specific command (e.g., '/start').
+
+        Args:
+            command (str): The command string.
+            handler (callable): The async function to handle the command.
+        """
         self.command_handlers[command] = handler
 
     def register_message_handler(self, handler):
-        """Registers a handler for generic text messages."""
+        """
+        Registers a handler for generic text messages.
+
+        Args:
+            handler (callable): The async function to handle messages.
+        """
         self.message_handlers.append(handler)
 
     async def _make_request(self, method, params=None, json_data=None):
-        """Makes an asynchronous request to the Telegram API."""
+        """
+        Makes an asynchronous request to the Telegram API.
+
+        Args:
+            method (str): The API method name.
+            params (dict, optional): Query parameters.
+            json_data (dict, optional): JSON body data.
+
+        Returns:
+            dict: The parsed JSON response.
+        """
         url = self.base_url + method
         data = None
         headers = {}
@@ -78,12 +118,20 @@ class TelegramBot:
         return json.loads(response)
 
     def _perform_request(self, req):
-        """Performs the blocking network request."""
+        """
+        Performs the blocking network request.
+
+        Args:
+            req (urllib.request.Request): The request object.
+
+        Returns:
+            str: The response body as a string.
+        """
         with urllib.request.urlopen(req, timeout=40) as response:
             return response.read().decode('utf-8')
 
     async def start_polling(self):
-        """Starts the bot polling loop."""
+        """Starts the bot polling loop to receive updates."""
         logger.info("Bot started polling...")
         while True:
             try:
@@ -97,7 +145,12 @@ class TelegramBot:
                 await asyncio.sleep(5)
 
     async def _dispatch(self, update):
-        """Dispatches the update to the appropriate handler."""
+        """
+        Dispatches the update to the appropriate handler.
+
+        Args:
+            update (dict): The update dictionary from Telegram.
+        """
         if 'message' not in update:
             return
 
@@ -131,11 +184,24 @@ class TelegramBot:
                     logger.error(f"Error in message handler: {e}", exc_info=True)
 
     async def send_message(self, chat_id, text):
-        """Sends a message to a chat."""
+        """
+        Sends a message to a chat.
+
+        Args:
+            chat_id (int): The ID of the chat.
+            text (str): The message text.
+        """
         await self._make_request('sendMessage', {'chat_id': chat_id, 'text': text})
 
     async def send_reply(self, chat_id, message_id, text):
-        """Sends a reply to a specific message."""
+        """
+        Sends a reply to a specific message.
+
+        Args:
+            chat_id (int): The ID of the chat.
+            message_id (int): The ID of the message to reply to.
+            text (str): The message text.
+        """
         params = {
             'chat_id': chat_id,
             'text': text,
@@ -144,7 +210,14 @@ class TelegramBot:
         await self._make_request('sendMessage', params)
 
     async def set_message_reaction(self, chat_id, message_id, emoji):
-        """Sets a reaction on a message with a given emoji."""
+        """
+        Sets a reaction on a message with a given emoji.
+
+        Args:
+            chat_id (int): The ID of the chat.
+            message_id (int): The ID of the message.
+            emoji (str): The emoji to react with.
+        """
         json_data = {
             'chat_id': chat_id,
             'message_id': message_id,
@@ -153,7 +226,14 @@ class TelegramBot:
         await self._make_request('setMessageReaction', json_data=json_data)
 
     async def forward_message(self, from_chat_id, message_id, to_chat_id):
-        """Forwards a message from one chat to another."""
+        """
+        Forwards a message from one chat to another.
+
+        Args:
+            from_chat_id (int): The ID of the source chat.
+            message_id (int): The ID of the message to forward.
+            to_chat_id (int): The ID of the destination chat.
+        """
         params = {
             'chat_id': to_chat_id,
             'from_chat_id': from_chat_id,
@@ -162,7 +242,14 @@ class TelegramBot:
         await self._make_request('forwardMessage', params)
 
     async def send_photo(self, chat_id, photo_buffer, caption=None):
-        """Sends a photo to a chat."""
+        """
+        Sends a photo to a chat.
+
+        Args:
+            chat_id (int): The ID of the chat.
+            photo_buffer (io.BytesIO): The buffer containing the photo data.
+            caption (str, optional): The caption for the photo.
+        """
         url = self.base_url + 'sendPhoto'
         data = {'chat_id': str(chat_id)}
         if caption:

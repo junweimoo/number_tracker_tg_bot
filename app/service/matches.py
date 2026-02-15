@@ -2,6 +2,9 @@ from abc import ABC, abstractmethod
 from enum import Enum
 
 class MatchType(Enum):
+    """
+    Enumeration of different types of matches between logged numbers.
+    """
     SAME_NUMBER_LAST = "SAME_NUMBER_LAST"
     SAME_NUMBER_LAST_SELF = "SAME_NUMBER_LAST_SELF"
     REVERSE_NUMBER_LAST = "REVERSE_NUMBER_LAST"
@@ -26,17 +29,45 @@ class MatchType(Enum):
     DIGIT_SUM = "DIGIT_SUM"
 
 class MatchContext:
+    """
+    Maintains the context of matches detected during a single number processing.
+    """
     def __init__(self):
+        """
+        Initializes MatchContext.
+        """
         # Set of (MatchType, message_user_id, matched_user_id, matched_number, matched_message_id, reply_text)
         self.matches = []
         # Set of MatchType
         self.types = set()
 
     def add_match(self, match_type, message_user_id, matched_user_id, matched_number, matched_message_id, reply_text):
+        """
+        Adds a detected match to the context.
+
+        Args:
+            match_type (MatchType): The type of match.
+            message_user_id (int): The ID of the user who logged the current number.
+            matched_user_id (int): The ID of the user who logged the matched number.
+            matched_number (int): The matched number.
+            matched_message_id (int): The ID of the message containing the matched number.
+            reply_text (str): The text to reply with.
+        """
         self.matches.append((match_type, message_user_id, matched_user_id, matched_number, matched_message_id, reply_text))
         self.types.add(match_type)
 
     def has_conflict(self, match_type, message_user_id, matched_user_id):
+        """
+        Checks if a match of the same type already exists for the same users in this context.
+
+        Args:
+            match_type (MatchType): The type of match.
+            message_user_id (int): The ID of the current user.
+            matched_user_id (int): The ID of the matched user.
+
+        Returns:
+            bool: True if a conflict exists, False otherwise.
+        """
         # Check if there is already a match of this type for these users
         for m in self.matches:
             if m[0] == match_type and m[1] == message_user_id and m[2] == matched_user_id:
@@ -44,7 +75,20 @@ class MatchContext:
         return False
 
 class MatchResult:
+    """
+    Represents the result of a match check.
+    """
     def __init__(self, match_type, matched_user_id, matched_number, matched_message_id, reply_text):
+        """
+        Initializes a MatchResult.
+
+        Args:
+            match_type (MatchType): The type of match.
+            matched_user_id (int): The ID of the matched user.
+            matched_number (int): The matched number.
+            matched_message_id (int): The ID of the matched message.
+            reply_text (str): The text to reply with.
+        """
         self.match_type = match_type
         self.matched_user_id = matched_user_id
         self.matched_number = matched_number
@@ -52,19 +96,54 @@ class MatchResult:
         self.reply_text = reply_text
 
 class MatchStrategy(ABC):
+    """
+    Abstract base class for match detection strategies.
+    """
     @abstractmethod
     def check(self, message, number, cache_data) -> list[MatchResult]:
+        """
+        Checks if the logged number triggers any matches.
+
+        Args:
+            message: The message object.
+            number (int): The logged number.
+            cache_data: Cached data for lookups.
+
+        Returns:
+            list[MatchResult]: A list of match results.
+        """
         pass
 
     @abstractmethod
     def has_conflict(self, match_context) -> bool:
+        """
+        Checks if this strategy conflicts with already detected matches.
+
+        Args:
+            match_context (MatchContext): The current match context.
+
+        Returns:
+            bool: True if a conflict exists, False otherwise.
+        """
         pass
 
 class SameNumberMatchStrategy(MatchStrategy):
+    """
+    Strategy for detecting if the current number is the same as the last number logged in the chat by a different user.
+    """
     def __init__(self, config):
+        """
+        Initializes SameNumberMatchStrategy.
+
+        Args:
+            config: Configuration object.
+        """
         self.config = config
 
     def check(self, message, number, cache_data):
+        """
+        Checks for a same-number match in the chat log.
+        """
         chat_log = cache_data.chat_log_cache.get(message.chat_id)
         if chat_log:
             last_user_id, last_number, last_ts, last_msg_id = chat_log[-1]
@@ -83,13 +162,28 @@ class SameNumberMatchStrategy(MatchStrategy):
         return []
 
     def has_conflict(self, match_context) -> bool:
+        """
+        Conflicts with self-same-number matches.
+        """
         return MatchType.SAME_NUMBER_LAST_SELF in match_context.types
 
 class SelfSameNumberMatchStrategy(MatchStrategy):
+    """
+    Strategy for detecting if the current number is the same as the last number logged by the same user.
+    """
     def __init__(self, config):
+        """
+        Initializes SelfSameNumberMatchStrategy.
+
+        Args:
+            config: Configuration object.
+        """
         self.config = config
 
     def check(self, message, number, cache_data):
+        """
+        Checks for a same-number match in the user's own log.
+        """
         user_log = cache_data.user_log_cache.get((message.user_id, message.chat_id))
         if user_log:
             last_number, last_ts, last_msg_id = user_log[-1]
@@ -107,13 +201,28 @@ class SelfSameNumberMatchStrategy(MatchStrategy):
         return []
 
     def has_conflict(self, match_context) -> bool:
+        """
+        Conflicts with same-number matches from other users.
+        """
         return MatchType.SAME_NUMBER_LAST in match_context.types
 
 class ReverseNumberMatchStrategy(MatchStrategy):
+    """
+    Strategy for detecting if the current number is the reverse of the last number logged in the chat.
+    """
     def __init__(self, config):
+        """
+        Initializes ReverseNumberMatchStrategy.
+
+        Args:
+            config: Configuration object.
+        """
         self.config = config
 
     def check(self, message, number, cache_data):
+        """
+        Checks for a reverse-number match in the chat log.
+        """
         if not (10 <= number <= 99):
             return []
         
@@ -141,13 +250,28 @@ class ReverseNumberMatchStrategy(MatchStrategy):
         return []
 
     def has_conflict(self, match_context) -> bool:
+        """
+        Conflicts with self-reverse-number matches.
+        """
         return MatchType.REVERSE_NUMBER_LAST_SELF in match_context.types
 
 class SelfReverseNumberMatchStrategy(MatchStrategy):
+    """
+    Strategy for detecting if the current number is the reverse of the last number logged by the same user.
+    """
     def __init__(self, config):
+        """
+        Initializes SelfReverseNumberMatchStrategy.
+
+        Args:
+            config: Configuration object.
+        """
         self.config = config
 
     def check(self, message, number, cache_data):
+        """
+        Checks for a reverse-number match in the user's own log.
+        """
         if not (10 <= number <= 99):
             return []
 
@@ -174,14 +298,30 @@ class SelfReverseNumberMatchStrategy(MatchStrategy):
         return []
 
     def has_conflict(self, match_context) -> bool:
+        """
+        Conflicts with reverse-number matches from other users.
+        """
         return MatchType.REVERSE_NUMBER_LAST in match_context.types
 
 class SumTargetMatchStrategy(MatchStrategy):
+    """
+    Strategy for detecting if the sum of the current number and the last number in the chat equals a target.
+    """
     def __init__(self, target, config):
+        """
+        Initializes SumTargetMatchStrategy.
+
+        Args:
+            target (int): The target sum.
+            config: Configuration object.
+        """
         self.target = target
         self.config = config
 
     def check(self, message, number, cache_data):
+        """
+        Checks for a sum-target match in the chat log.
+        """
         chat_log = cache_data.chat_log_cache.get(message.chat_id)
         if chat_log:
             last_user_id, last_number, last_ts, last_msg_id = chat_log[-1]
@@ -200,14 +340,30 @@ class SumTargetMatchStrategy(MatchStrategy):
         return []
 
     def has_conflict(self, match_context) -> bool:
+        """
+        Conflicts with self-sum-target matches.
+        """
         return MatchType.SUM_TARGET_SELF in match_context.types
 
 class SelfSumTargetMatchStrategy(MatchStrategy):
+    """
+    Strategy for detecting if the sum of the current number and the user's last number equals a target.
+    """
     def __init__(self, target, config):
+        """
+        Initializes SelfSumTargetMatchStrategy.
+
+        Args:
+            target (int): The target sum.
+            config: Configuration object.
+        """
         self.target = target
         self.config = config
 
     def check(self, message, number, cache_data):
+        """
+        Checks for a sum-target match in the user's own log.
+        """
         user_log = cache_data.user_log_cache.get((message.user_id, message.chat_id))
         if user_log:
             last_number, last_ts, last_msg_id = user_log[-1]
@@ -225,13 +381,28 @@ class SelfSumTargetMatchStrategy(MatchStrategy):
         return []
 
     def has_conflict(self, match_context) -> bool:
+        """
+        Conflicts with sum-target matches from other users.
+        """
         return MatchType.SUM_TARGET in match_context.types
 
 class ABCSumMatchStrategy(MatchStrategy):
+    """
+    Strategy for detecting if the current number is the sum of any two recent numbers in the chat.
+    """
     def __init__(self, config):
+        """
+        Initializes ABCSumMatchStrategy.
+
+        Args:
+            config: Configuration object.
+        """
         self.config = config
 
     def check(self, message, number, cache_data):
+        """
+        Checks for an ABC sum match in the recent chat log.
+        """
         chat_log = cache_data.chat_log_cache.get(message.chat_id)
         if not chat_log or len(chat_log) < 2:
             return []
@@ -268,13 +439,28 @@ class ABCSumMatchStrategy(MatchStrategy):
         return []
 
     def has_conflict(self, match_context) -> bool:
+        """
+        No conflicts for ABC sum matches.
+        """
         return False
 
 class DoubleMatchStrategy(MatchStrategy):
+    """
+    Strategy for detecting if the current number is double the last number in the chat.
+    """
     def __init__(self, config):
+        """
+        Initializes DoubleMatchStrategy.
+
+        Args:
+            config: Configuration object.
+        """
         self.config = config
 
     def check(self, message, number, cache_data):
+        """
+        Checks for a double-number match in the chat log.
+        """
         chat_log = cache_data.chat_log_cache.get(message.chat_id)
         if chat_log:
             last_user_id, last_number, last_ts, last_msg_id = chat_log[-1]
@@ -293,13 +479,28 @@ class DoubleMatchStrategy(MatchStrategy):
         return []
 
     def has_conflict(self, match_context) -> bool:
+        """
+        Conflicts with self-double matches.
+        """
         return MatchType.DOUBLE_LAST_SELF in match_context.types
 
 class SelfDoubleMatchStrategy(MatchStrategy):
+    """
+    Strategy for detecting if the current number is double the user's last number.
+    """
     def __init__(self, config):
+        """
+        Initializes SelfDoubleMatchStrategy.
+
+        Args:
+            config: Configuration object.
+        """
         self.config = config
 
     def check(self, message, number, cache_data):
+        """
+        Checks for a double-number match in the user's own log.
+        """
         user_log = cache_data.user_log_cache.get((message.user_id, message.chat_id))
         if user_log:
             last_number, last_ts, last_msg_id = user_log[-1]
@@ -317,13 +518,28 @@ class SelfDoubleMatchStrategy(MatchStrategy):
         return []
 
     def has_conflict(self, match_context) -> bool:
+        """
+        Conflicts with double matches from other users.
+        """
         return MatchType.DOUBLE_LAST in match_context.types
 
 class HalfMatchStrategy(MatchStrategy):
+    """
+    Strategy for detecting if the current number is half the last number in the chat.
+    """
     def __init__(self, config):
+        """
+        Initializes HalfMatchStrategy.
+
+        Args:
+            config: Configuration object.
+        """
         self.config = config
 
     def check(self, message, number, cache_data):
+        """
+        Checks for a half-number match in the chat log.
+        """
         chat_log = cache_data.chat_log_cache.get(message.chat_id)
         if chat_log:
             last_user_id, last_number, last_ts, last_msg_id = chat_log[-1]
@@ -342,13 +558,28 @@ class HalfMatchStrategy(MatchStrategy):
         return []
 
     def has_conflict(self, match_context) -> bool:
+        """
+        Conflicts with self-half matches.
+        """
         return MatchType.HALF_LAST_SELF in match_context.types
 
 class SelfHalfMatchStrategy(MatchStrategy):
+    """
+    Strategy for detecting if the current number is half the user's last number.
+    """
     def __init__(self, config):
+        """
+        Initializes SelfHalfMatchStrategy.
+
+        Args:
+            config: Configuration object.
+        """
         self.config = config
 
     def check(self, message, number, cache_data):
+        """
+        Checks for a half-number match in the user's own log.
+        """
         user_log = cache_data.user_log_cache.get((message.user_id, message.chat_id))
         if user_log:
             last_number, last_ts, last_msg_id = user_log[-1]
@@ -366,13 +597,28 @@ class SelfHalfMatchStrategy(MatchStrategy):
         return []
 
     def has_conflict(self, match_context) -> bool:
+        """
+        Conflicts with half matches from other users.
+        """
         return MatchType.HALF_LAST in match_context.types
 
 class StepMatchStrategy(MatchStrategy):
+    """
+    Strategy for detecting if the current number is one more or one less than the last number in the chat.
+    """
     def __init__(self, config):
+        """
+        Initializes StepMatchStrategy.
+
+        Args:
+            config: Configuration object.
+        """
         self.config = config
 
     def check(self, message, number, cache_data):
+        """
+        Checks for a step match in the chat log.
+        """
         chat_log = cache_data.chat_log_cache.get(message.chat_id)
         if chat_log:
             last_user_id, last_number, last_ts, last_msg_id = chat_log[-1]
@@ -392,13 +638,28 @@ class StepMatchStrategy(MatchStrategy):
         return []
 
     def has_conflict(self, match_context) -> bool:
+        """
+        Conflicts with self-step matches.
+        """
         return MatchType.STEP_UP_SELF in match_context.types or MatchType.STEP_DOWN_SELF in match_context.types
 
 class SelfStepMatchStrategy(MatchStrategy):
+    """
+    Strategy for detecting if the current number is one more or one less than the user's last number.
+    """
     def __init__(self, config):
+        """
+        Initializes SelfStepMatchStrategy.
+
+        Args:
+            config: Configuration object.
+        """
         self.config = config
 
     def check(self, message, number, cache_data):
+        """
+        Checks for a step match in the user's own log.
+        """
         user_log = cache_data.user_log_cache.get((message.user_id, message.chat_id))
         if user_log:
             last_number, last_ts, last_msg_id = user_log[-1]
@@ -416,13 +677,28 @@ class SelfStepMatchStrategy(MatchStrategy):
         return []
 
     def has_conflict(self, match_context) -> bool:
+        """
+        Conflicts with step matches from other users.
+        """
         return MatchType.STEP_UP in match_context.types or MatchType.STEP_DOWN in match_context.types
 
 class SquareMatchStrategy(MatchStrategy):
+    """
+    Strategy for detecting if the current number is the square of the last number in the chat.
+    """
     def __init__(self, config):
+        """
+        Initializes SquareMatchStrategy.
+
+        Args:
+            config: Configuration object.
+        """
         self.config = config
 
     def check(self, message, number, cache_data):
+        """
+        Checks for a square match in the chat log.
+        """
         chat_log = cache_data.chat_log_cache.get(message.chat_id)
         if chat_log:
             last_user_id, last_number, last_ts, last_msg_id = chat_log[-1]
@@ -435,13 +711,28 @@ class SquareMatchStrategy(MatchStrategy):
         return []
 
     def has_conflict(self, match_context) -> bool:
+        """
+        Conflicts with self-square matches.
+        """
         return MatchType.SQUARE_LAST_SELF in match_context.types
 
 class SelfSquareMatchStrategy(MatchStrategy):
+    """
+    Strategy for detecting if the current number is the square of the user's last number.
+    """
     def __init__(self, config):
+        """
+        Initializes SelfSquareMatchStrategy.
+
+        Args:
+            config: Configuration object.
+        """
         self.config = config
 
     def check(self, message, number, cache_data):
+        """
+        Checks for a square match in the user's own log.
+        """
         user_log = cache_data.user_log_cache.get((message.user_id, message.chat_id))
         if user_log:
             last_number, last_ts, last_msg_id = user_log[-1]
@@ -453,13 +744,28 @@ class SelfSquareMatchStrategy(MatchStrategy):
         return []
 
     def has_conflict(self, match_context) -> bool:
+        """
+        Conflicts with square matches from other users.
+        """
         return MatchType.SQUARE_LAST in match_context.types
 
 class SqrtMatchStrategy(MatchStrategy):
+    """
+    Strategy for detecting if the current number is the square root of the last number in the chat.
+    """
     def __init__(self, config):
+        """
+        Initializes SqrtMatchStrategy.
+
+        Args:
+            config: Configuration object.
+        """
         self.config = config
 
     def check(self, message, number, cache_data):
+        """
+        Checks for a square root match in the chat log.
+        """
         chat_log = cache_data.chat_log_cache.get(message.chat_id)
         if chat_log:
             last_user_id, last_number, last_ts, last_msg_id = chat_log[-1]
@@ -472,13 +778,28 @@ class SqrtMatchStrategy(MatchStrategy):
         return []
 
     def has_conflict(self, match_context) -> bool:
+        """
+        Conflicts with self-square-root matches.
+        """
         return MatchType.SQRT_LAST_SELF in match_context.types
 
 class SelfSqrtMatchStrategy(MatchStrategy):
+    """
+    Strategy for detecting if the current number is the square root of the user's last number.
+    """
     def __init__(self, config):
+        """
+        Initializes SelfSqrtMatchStrategy.
+
+        Args:
+            config: Configuration object.
+        """
         self.config = config
 
     def check(self, message, number, cache_data):
+        """
+        Checks for a square root match in the user's own log.
+        """
         user_log = cache_data.user_log_cache.get((message.user_id, message.chat_id))
         if user_log:
             last_number, last_ts, last_msg_id = user_log[-1]
@@ -490,13 +811,28 @@ class SelfSqrtMatchStrategy(MatchStrategy):
         return []
 
     def has_conflict(self, match_context) -> bool:
+        """
+        Conflicts with square root matches from other users.
+        """
         return MatchType.SQRT_LAST in match_context.types
 
 class ArithmeticProgressionMatchStrategy(MatchStrategy):
+    """
+    Strategy for detecting if the last three numbers in the chat form an arithmetic progression.
+    """
     def __init__(self, config):
+        """
+        Initializes ArithmeticProgressionMatchStrategy.
+
+        Args:
+            config: Configuration object.
+        """
         self.config = config
 
     def check(self, message, number, cache_data):
+        """
+        Checks for an arithmetic progression in the chat log.
+        """
         chat_log = cache_data.chat_log_cache.get(message.chat_id)
         if not chat_log or len(chat_log) < 2:
             return []
@@ -520,13 +856,28 @@ class ArithmeticProgressionMatchStrategy(MatchStrategy):
         return []
 
     def has_conflict(self, match_context) -> bool:
+        """
+        No conflicts for arithmetic progression matches.
+        """
         return False
 
 class GeometricProgressionMatchStrategy(MatchStrategy):
+    """
+    Strategy for detecting if the last three numbers in the chat form a geometric progression.
+    """
     def __init__(self, config):
+        """
+        Initializes GeometricProgressionMatchStrategy.
+
+        Args:
+            config: Configuration object.
+        """
         self.config = config
 
     def check(self, message, number, cache_data):
+        """
+        Checks for a geometric progression in the chat log.
+        """
         chat_log = cache_data.chat_log_cache.get(message.chat_id)
         if not chat_log or len(chat_log) < 2:
             return []
@@ -550,16 +901,34 @@ class GeometricProgressionMatchStrategy(MatchStrategy):
         return []
 
     def has_conflict(self, match_context) -> bool:
+        """
+        No conflicts for geometric progression matches.
+        """
         return False
 
 class DigitSumMatchStrategy(MatchStrategy):
+    """
+    Strategy for detecting if the current number has the same digit sum as the last number in the chat.
+    """
     def __init__(self, config):
+        """
+        Initializes DigitSumMatchStrategy.
+
+        Args:
+            config: Configuration object.
+        """
         self.config = config
 
     def _sum_digits(self, n):
+        """
+        Calculates the sum of digits of a number.
+        """
         return sum(int(d) for d in str(abs(n)))
 
     def check(self, message, number, cache_data):
+        """
+        Checks for a digit sum match in the chat log.
+        """
         chat_log = cache_data.chat_log_cache.get(message.chat_id)
         if chat_log:
             last_user_id, last_number, last_ts, last_msg_id = chat_log[-1]
@@ -572,4 +941,7 @@ class DigitSumMatchStrategy(MatchStrategy):
         return []
 
     def has_conflict(self, match_context) -> bool:
+        """
+        No conflicts for digit sum matches.
+        """
         return False
