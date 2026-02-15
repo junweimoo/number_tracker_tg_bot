@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import time
 from datetime import datetime, timezone, timedelta
@@ -191,7 +192,7 @@ class NumberLogService:
                     return True
         return False
 
-    async def _mark_user_attendance(self, message, today_date, yesterday_date, user_name):
+    async def _mark_user_attendance(self, message, today_date, yesterday_date, user_name, current_streak):
         """
         Updates the user's streak and attendance if this is their first log of the day.
         Sends a reply with the updated streak info.
@@ -221,17 +222,15 @@ class NumberLogService:
                 (update_streak_query, streak_params),
                 (insert_attendance_query, attendance_params)
             ])
-            
-            # Fetch updated streak and attendance history for reply
-            # We need to fetch the current streak from user_data
-            streak_query = self.user_repo.get_fetch_streak_query()
-            streak_result = await self.db.fetch_one(streak_query, (message.user_id, message.chat_id))
-            current_user_streak = streak_result[0] if streak_result else 0
-            
+
             # Fetch last 7 days attendance
             attendance_rows = await self.attendance_repo.get_recent_attendance(message.user_id, message.chat_id, limit=7)
             attendance_dates = [row[0] for row in attendance_rows]
             
+            # Ensure today is included in the visual grid even if the fetch happened before the insert was fully committed
+            if today_date not in attendance_dates:
+                attendance_dates.append(today_date)
+
             # Format attendance string
             attendance_str = ""
             for i in range(6, -1, -1):
@@ -241,12 +240,24 @@ class NumberLogService:
                 else:
                     attendance_str += "⬜ "
 
-            streak_reply = "\n".join(self.config.attendance_replies)
-            streak_reply = streak_reply.format(name=user_name, attendance=attendance_str, streak=current_user_streak)
-            return streak_reply
+            # Calculate new streak for display
+            streak_query = self.user_repo.get_fetch_streak_query()
+            streak_result = await self.db.fetch_one(streak_query, (message.user_id, message.chat_id))
+            actual_new_streak = streak_result[0] if streak_result else 1
+
+            if actual_new_streak > 1:
+                streak_reply = "\n".join(self.config.attendance_replies)
+                streak_reply = streak_reply.format(name=user_name, attendance=attendance_str, streak=actual_new_streak)
+            else:
+                filtered_replies = [line for line in self.config.attendance_replies if "{streak}" not in line]
+                streak_reply = "\n".join(filtered_replies)
+                streak_reply = streak_reply.format(name=user_name, attendance=attendance_str)
+
+            return streak_reply, actual_new_streak
 
         except Exception as e:
             logger.error(f"Failed to update user streak/attendance: {e}")
+            return None, current_streak
 
     def _update_user_info_cache(self, message, user_name):
         user_info_cache_key = (message.user_id, message.chat_id)
@@ -263,21 +274,18 @@ class NumberLogService:
                 message.username
             )
 
-    def _update_user_bitmap_cache(self, message, number):
-        user_info_cache_key = (message.user_id, message.chat_id)
-        numbers_bitmap = self.user_info_cache[user_info_cache_key].numbers_bitmap
+    def _calculate_remaining_numbers(self, numbers_bitmap, number):
         current_mask = (1 << (127 - number))
         if not numbers_bitmap & current_mask:
-            numbers_bitmap |= current_mask
-            self.user_info_cache[user_info_cache_key].numbers_bitmap = numbers_bitmap
+            new_bitmap = numbers_bitmap | current_mask
             mask = 1 << 127
             missing_numbers = []
             for i in range(101):
-                if not mask & numbers_bitmap:
+                if not mask & new_bitmap:
                     missing_numbers.append(i)
                 mask >>= 1
-            return missing_numbers
-        return None
+            return missing_numbers, new_bitmap
+        return None, numbers_bitmap
 
     async def process_number(self, message, number):
         try:
@@ -306,13 +314,22 @@ class NumberLogService:
             if not user_name:
                 user_name = "Unknown"
 
-            # Update User Info Cache name and handle
-            self._update_user_info_cache(message, user_name)
+            # Get current user info from cache
+            user_info_cache_key = (message.user_id, message.chat_id)
+            user_info = self.user_info_cache.get(user_info_cache_key)
+            if not user_info:
+                user_info = UserInfo(
+                    message.chat_id,
+                    message.thread_id,
+                    message.user_id,
+                    user_name,
+                    message.username
+                )
+            
+            # Calculate new bitmap and remaining numbers (don't update cache yet)
+            remaining_numbers, new_bitmap = self._calculate_remaining_numbers(user_info.numbers_bitmap, number)
 
-            # Update User Info Cache numbers bitmap
-            remaining_numbers = self._update_user_bitmap_cache(message, number)
-
-            # Prepare Cache Data Object
+            # Prepare Cache Data Object for strategies
             cache_data = CacheData(
                 self.user_info_cache,
                 self.user_log_cache,
@@ -371,8 +388,8 @@ class NumberLogService:
             # ---
 
             # --- Update User Attendance ---
-            user_info = self.user_info_cache[(message.user_id, message.chat_id)]
             last_login_date = user_info.last_login_date
+            new_streak = user_info.current_streak
 
             should_mark_attendance = False
             if last_login_date == today_date:
@@ -386,9 +403,11 @@ class NumberLogService:
 
 
             if should_mark_attendance:
-                reply_str = await self._mark_user_attendance(message, today_date, yesterday_date, user_name)
-                additional_replies.append(reply_str)
-                user_info.last_login_date = today_date
+                reply_str, new_streak = await self._mark_user_attendance(
+                    message, today_date, yesterday_date, user_name, user_info.current_streak
+                )
+                if reply_str:
+                    additional_replies.append(reply_str)
             # ---
 
             # --- Achievement Logic ---
@@ -478,22 +497,18 @@ class NumberLogService:
                     transaction_queries.append((upsert_match_counts_query, match_counts_params))
 
             # F. Update user_data (bitmap and achievements)
+            new_achievements_str = None
             if achievement_context.achievements:
-                new_achievements = ",".join([a[0].value for a in achievement_context.achievements])
+                new_achievements_str = ",".join([a[0].value for a in achievement_context.achievements])
                 upsert_bitmap_query = self.user_repo.get_upsert_user_bitmap_with_achievements_query()
                 bitmap_params = (
                     message.user_id,
                     message.chat_id,
                     user_name,
                     number,
-                    new_achievements,
+                    new_achievements_str,
                     number
                 )
-
-                if user_info.achievements:
-                    user_info.achievements += "," + new_achievements
-                else:
-                    user_info.achievements = new_achievements
             else:
                 upsert_bitmap_query = self.user_repo.get_upsert_user_bitmap_query()
                 bitmap_params = (
@@ -512,14 +527,27 @@ class NumberLogService:
                 await self.db.execute_transaction(transaction_queries)
             # ---
 
-            # --- Update Caches ---
-            # Update User Cache
-            user_log_cache_key = (message.user_id, message.chat_id)
-            if user_log_cache_key not in self.user_log_cache:
-                self.user_log_cache[user_log_cache_key] = deque(maxlen=10)
-            self.user_log_cache[user_log_cache_key].append((number, ts, message.message_id))
+            # --- Update Caches (Only after successful transaction) ---
+            # Update User Info Cache
+            user_info.user_name = user_name
+            user_info.user_handle = message.username
+            user_info.numbers_bitmap = new_bitmap
+            user_info.current_streak = new_streak
+            if should_mark_attendance:
+                user_info.last_login_date = today_date
+            if new_achievements_str:
+                if user_info.achievements:
+                    user_info.achievements += "," + new_achievements_str
+                else:
+                    user_info.achievements = new_achievements_str
+            self.user_info_cache[user_info_cache_key] = user_info
 
-            # Update Chat Cache
+            # Update User Log Cache
+            if user_info_cache_key not in self.user_log_cache:
+                self.user_log_cache[user_info_cache_key] = deque(maxlen=10)
+            self.user_log_cache[user_info_cache_key].append((number, ts, message.message_id))
+
+            # Update Chat Log Cache
             chat_log_cache_key = message.chat_id
             if chat_log_cache_key not in self.chat_log_cache:
                 self.chat_log_cache[chat_log_cache_key] = deque(maxlen=10)
@@ -532,6 +560,8 @@ class NumberLogService:
 
             # --- Send Feedback (Reaction & Reply) ---
             if self.bot:
+                tasks = []
+
                 # Send last hit reaction
                 hit_reaction = None
                 for hit in hit_context.hits:
@@ -539,15 +569,42 @@ class NumberLogService:
                     if current_reaction:
                         hit_reaction = current_reaction
                 if hit_reaction:
-                    await self.bot.set_message_reaction(message.chat_id, message.message_id, hit_reaction)
+                    tasks.append(self.bot.set_message_reaction(message.chat_id, message.message_id, hit_reaction))
 
                 # Send hit replies and forward message
                 for hit in hit_context.hits:
                     _, _, hit_reply_text, _, forward_chat_ids, _ = hit
                     if hit_reply_text:
-                        await self.bot.send_reply(message.chat_id, message.message_id, hit_reply_text)
+                        tasks.append(self.bot.send_reply(message.chat_id, message.message_id, hit_reply_text))
                     for forward_chat_id in forward_chat_ids:
-                        await self.bot.forward_message(message.chat_id, message.message_id, forward_chat_id)
+                        tasks.append(self.bot.forward_message(message.chat_id, message.message_id, forward_chat_id))
+
+                # Send match replies to the matched message IDs
+                for match in match_context.matches:
+                    _, _, _, _, matched_msg_id, match_reply_text = match
+                    if matched_msg_id:
+                        tasks.append(self.bot.send_reply(message.chat_id, matched_msg_id, match_reply_text))
+
+                # Send numbers obtained message if new number
+                if remaining_numbers is not None:
+                    if len(remaining_numbers) == 0:
+                        tasks.append(self.bot.send_reply(message.chat_id, message.message_id, "All numbers collected!"))
+                    else:
+                        remaining_numbers_reply = (f"New number! {len(remaining_numbers)} "
+                                                   f"number{'s' if len(remaining_numbers) > 1 else ''} left to collect")
+                        if len(remaining_numbers) < 10:
+                            remaining_numbers_reply += f": {', '.join(map(str, remaining_numbers))}"
+                        tasks.append(self.bot.send_reply(message.chat_id, message.message_id, remaining_numbers_reply))
+
+                if tasks:
+                    await asyncio.gather(*tasks)
+
+
+                # Send Streak message if total >= 2
+                if streak_total >= 2:
+                    streak_msg = f"{streak_total}-Streak!\n"
+                    streak_msg += '🔥' * streak_total
+                    await self.bot.send_message(message.chat_id, streak_msg)
 
                 # Send achievement replies
                 for achievement in achievement_context.achievements:
@@ -556,32 +613,9 @@ class NumberLogService:
                         achievement_reply_text = "👏 Achievement Unlocked: " + achievement_text
                         await self.bot.send_reply(message.chat_id, message.message_id, achievement_reply_text)
 
-                # Send match replies to the matched message IDs
-                for match in match_context.matches:
-                    _, _, _, _, matched_msg_id, match_reply_text = match
-                    if matched_msg_id:
-                        await self.bot.send_reply(message.chat_id, matched_msg_id, match_reply_text)
-
-            # Send numbers obtained message if new number
-            if remaining_numbers is not None:
-                if len(remaining_numbers) == 0:
-                    await self.bot.send_reply(message.chat_id, message.message_id, "All numbers collected!")
-                else:
-                    remaining_numbers_reply = (f"New number! {len(remaining_numbers)} "
-                                               f"number{'s' if len(remaining_numbers) > 1 else ''} left to collect")
-                    if len(remaining_numbers) < 10:
-                        remaining_numbers_reply += f": {', '.join(map(str, remaining_numbers))}"
-                    await self.bot.send_reply(message.chat_id, message.message_id, remaining_numbers_reply)
-
-            # Send Streak message if total >= 2
-            if streak_total >= 2:
-                streak_msg = f"{streak_total}-Streak!\n"
-                streak_msg += '🔥' * streak_total
-                await self.bot.send_message(message.chat_id, streak_msg)
-
-            # Send additional replies
-            for reply in additional_replies:
-                await self.bot.send_reply(message.chat_id, message.message_id, reply)
+                # Send additional replies
+                for reply in additional_replies:
+                    await self.bot.send_reply(message.chat_id, message.message_id, reply)
             # ---
 
         except Exception as e:
