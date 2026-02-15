@@ -47,11 +47,28 @@ class UserRepository:
             numbers_bitmap = set_bit(user_data.numbers_bitmap, %s, 1)
         """
 
+    def get_upsert_user_bitmap_with_achievements_query(self):
+        """
+        Upserts the user_data row and updates the numbers_bitmap and achievements.
+        """
+        return """
+        INSERT INTO user_data (user_id, chat_id, user_name, numbers_bitmap, achievements)
+        VALUES (%s, %s, %s, set_bit(repeat('0', 128)::bit(128), %s, 1), %s)
+        ON CONFLICT (user_id, chat_id) DO UPDATE
+        SET 
+            user_name = EXCLUDED.user_name,
+            numbers_bitmap = set_bit(user_data.numbers_bitmap, %s, 1),
+            achievements = CASE 
+                WHEN user_data.achievements IS NULL OR user_data.achievements = '' THEN EXCLUDED.achievements
+                ELSE user_data.achievements || ',' || EXCLUDED.achievements
+            END
+        """
+
     def get_all_users_query(self):
         return """
         SELECT 
             id, chat_id, thread_id, user_id, user_name, user_handle, 
-            numbers_bitmap, last_login_date, current_streak, extend_info 
+            numbers_bitmap, last_login_date, current_streak, achievements, extend_info
         FROM user_data
         """
 

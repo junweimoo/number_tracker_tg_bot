@@ -21,13 +21,13 @@
     "reply_message": "I detected the number: {number}"
   },
   "match_replies": {
-    "SAME_NUMBER_LAST": "{u1} and {u2} match!",
-    "SAME_NUMBER_LAST_SELF": "{u1} self-match!",
-    "REVERSE_NUMBER_LAST": "{u1} and {u2} reverse!",
-    "REVERSE_NUMBER_LAST_SELF": "{u1} self-reverse!",
+    "SAME_NUMBER_LAST": "{u1} and {u2} matched!",
+    "SAME_NUMBER_LAST_SELF": "{u1} self-matched!",
+    "REVERSE_NUMBER_LAST": "{u1} and {u2} reversed!",
+    "REVERSE_NUMBER_LAST_SELF": "{u1} self-reversed!",
     "SUM_TARGET": "{u1} and {u2} sum to {target}!",
-    "SUM_TARGET_SELF": "{u1} self-sum to {target}!",
-    "ABC_SUM": "{u1}'s {n1} + {u2}'s {n2} = {u3}'s {n3}!",
+    "SUM_TARGET_SELF": "{u1} self-summed to {target}!",
+    "ABC_SUM": "{u1}'s {n1} plus {u2}'s {n2} equals {u3}'s {n3}!",
     "DOUBLE_LAST": "{u2} doubled {u1}'s {number}!",
     "DOUBLE_LAST_SELF": "{u1} doubled their own number!",
     "HALF_LAST": "{u2} halved {u1}'s {number}!",
@@ -49,5 +49,11 @@
     "Your attendance for the past 7 days:",
     "{attendance}",
     "\uD83D\uDD25 Congrats on your {streak}-day streak!"
-  ]
+  ],
+  "achievement_text": {
+    "ALL_NUMBERS": {"text": "All Numbers Collected!", "emoji": "👑"},
+    "GET_NUMBER_0": {"text": "Obtained number 0!", "emoji": "🍌"},
+    "GET_NUMBER_88": {"text": "Obtained number 88!", "emoji": "🎱"},
+    "GET_NUMBER_100": {"text": "Obtained number 100!", "emoji": "💯"}
+  }
 }

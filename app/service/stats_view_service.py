@@ -16,6 +16,30 @@ class StatsViewService:
     def set_bot(self, bot):
         self.bot = bot
 
+    async def get_user_achievements_emojis(self, user_id, chat_id):
+        """Fetches and formats the user's achievements."""
+        try:
+            query = "SELECT achievements FROM user_data WHERE user_id = %s AND chat_id = %s"
+            result = self.db.fetch_one(query, (user_id, chat_id))
+            if result and result[0]:
+                achievement_ids = result[0].split(',')
+                achievement_emojis = []
+                config_data = self.config.achievement_text
+                
+                for aid in achievement_ids:
+                    data = config_data.get(aid)
+                    if data:
+                        emoji = data.get('emoji')
+                        if emoji:
+                            achievement_emojis.append(emoji)
+                
+                if achievement_emojis:
+                    return " ".join(achievement_emojis)
+            return ""
+        except Exception as e:
+            logger.error(f"Error fetching user achievements: {e}")
+            return ""
+
     async def get_user_stats_summary(self, message):
         user_id = message.user_id
         chat_id = message.chat_id
@@ -63,6 +87,11 @@ class StatsViewService:
             
             if current_streak > 0:
                 response_parts.append(f"Current Streak: {current_streak} days 🔥")
+
+            # 7. Achievements (Emojis only)
+            achievements_str = await self.get_user_achievements_emojis(user_id, chat_id)
+            if achievements_str:
+                response_parts.append(f"\nAchievements: {achievements_str}")
 
             return "\n".join(response_parts)
 

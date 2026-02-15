@@ -1,4 +1,5 @@
 import logging
+import time
 from datetime import datetime, timezone, timedelta
 from collections import deque
 from service.matches import (
@@ -24,6 +25,12 @@ from service.matches import (
     GeometricProgressionMatchStrategy,
     DigitSumMatchStrategy)
 from service.hits import HitContext, HitSpecificNumberStrategy, HitCloseNumberStrategy
+from service.achievements import (
+    AchievementContext,
+    AchievementType,
+    ObtainAllNumbersAchievementStrategy,
+    GetSpecificNumberAchievementStrategy
+)
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +45,7 @@ class StreakInfo:
 
 class UserInfo:
     def __init__(self, chat_id, thread_id, user_id, user_name, user_handle, numbers_bitmap=0,
-                 last_login_date=None, current_streak=0, extend_info=None):
+                 last_login_date=None, current_streak=0, achievements=None, extend_info=None):
         self.chat_id = chat_id
         self.thread_id = thread_id
         self.user_id = user_id
@@ -47,6 +54,7 @@ class UserInfo:
         self.numbers_bitmap = numbers_bitmap
         self.last_login_date = last_login_date
         self.current_streak = current_streak
+        self.achievements = achievements
         self.extend_info = extend_info
 
 class CacheData:
@@ -125,6 +133,14 @@ class NumberLogService:
             except ValueError:
                 logger.warning(f"Invalid hit number in config: {number_str}")
 
+        # Initialize Achievement Strategies
+        self.achievement_strategies = [
+            ObtainAllNumbersAchievementStrategy(self.config, self.user_repo, self.db),
+            GetSpecificNumberAchievementStrategy(0, AchievementType.GET_NUMBER_0, self.config, self.user_repo, self.db),
+            GetSpecificNumberAchievementStrategy(88, AchievementType.GET_NUMBER_88, self.config, self.user_repo, self.db),
+            GetSpecificNumberAchievementStrategy(100, AchievementType.GET_NUMBER_100, self.config, self.user_repo, self.db)
+        ]
+
         # Precache user data from database
         self._precache_user_data()
 
@@ -139,7 +155,8 @@ class NumberLogService:
             if users:
                 for user in users:
                     # Unpack all columns
-                    _, chat_id, thread_id, user_id, user_name, user_handle, numbers_bitmap, last_login_date, current_streak, extend_info = user
+                    (_, chat_id, thread_id, user_id, user_name, user_handle, numbers_bitmap, last_login_date,
+                     current_streak, achievements, extend_info) = user
                     
                     # Convert numbers_bitmap to int
                     if isinstance(numbers_bitmap, str):
@@ -152,7 +169,7 @@ class NumberLogService:
 
                     self.user_info_cache[(user_id, chat_id)] = UserInfo(
                         chat_id, thread_id, user_id, user_name, user_handle,
-                        numbers_bitmap, last_login_date, current_streak, extend_info
+                        numbers_bitmap, last_login_date, current_streak, achievements, extend_info
                     )
                 logger.info(f"Pre-cached {len(users)} users.")
         except Exception as e:
@@ -226,7 +243,7 @@ class NumberLogService:
 
             streak_reply = "\n".join(self.config.attendance_replies)
             streak_reply = streak_reply.format(name=user_name, attendance=attendance_str, streak=current_user_streak)
-            await self.bot.send_reply(message.chat_id, message.message_id, streak_reply)
+            return streak_reply
 
         except Exception as e:
             logger.error(f"Failed to update user streak/attendance: {e}")
@@ -264,6 +281,8 @@ class NumberLogService:
 
     async def process_number(self, message, number):
         try:
+            start_time = time.perf_counter()
+
             # Timestamp Calculation
             if message.date:
                 ts = datetime.fromtimestamp(message.date, tz=timezone.utc)
@@ -299,6 +318,8 @@ class NumberLogService:
                 self.user_log_cache,
                 self.chat_log_cache
             )
+
+            additional_replies = []
 
             # --- Hit Logic ---
             hit_context = HitContext()
@@ -363,9 +384,20 @@ class NumberLogService:
                 if db_last_login_date != today_date:
                     should_mark_attendance = True
 
+
             if should_mark_attendance:
-                await self._mark_user_attendance(message, today_date, yesterday_date, user_name)
+                reply_str = await self._mark_user_attendance(message, today_date, yesterday_date, user_name)
+                additional_replies.append(reply_str)
                 user_info.last_login_date = today_date
+            # ---
+
+            # --- Achievement Logic ---
+            achievement_context = AchievementContext()
+            for strategy in self.achievement_strategies:
+                result = strategy.check(message, number, cache_data, remaining_numbers)
+                if result:
+                    achievement_context.add_achievement(result.achievement_type, result.reply_text)
+                    logger.info(f"Achievement unlocked! - {result.achievement_type.name} for user {message.user_id}.")
             # ---
 
             # --- Transaction Logic ---
@@ -445,15 +477,32 @@ class NumberLogService:
                     )
                     transaction_queries.append((upsert_match_counts_query, match_counts_params))
 
-            # F. Update user_data bitmap
-            upsert_bitmap_query = self.user_repo.get_upsert_user_bitmap_query()
-            bitmap_params = (
-                message.user_id,
-                message.chat_id,
-                user_name,
-                number,
-                number
-            )
+            # F. Update user_data (bitmap and achievements)
+            if achievement_context.achievements:
+                new_achievements = ",".join([a[0].value for a in achievement_context.achievements])
+                upsert_bitmap_query = self.user_repo.get_upsert_user_bitmap_with_achievements_query()
+                bitmap_params = (
+                    message.user_id,
+                    message.chat_id,
+                    user_name,
+                    number,
+                    new_achievements,
+                    number
+                )
+
+                if user_info.achievements:
+                    user_info.achievements += "," + new_achievements
+                else:
+                    user_info.achievements = new_achievements
+            else:
+                upsert_bitmap_query = self.user_repo.get_upsert_user_bitmap_query()
+                bitmap_params = (
+                    message.user_id,
+                    message.chat_id,
+                    user_name,
+                    number,
+                    number
+                )
             transaction_queries.append((upsert_bitmap_query, bitmap_params))
 
             # Execute Transaction
@@ -478,7 +527,8 @@ class NumberLogService:
             # ---
 
             # Log Success
-            logger.info(f"Logged number {number}, attendance, and count for user {message.user_id}.")
+            duration = time.perf_counter() - start_time
+            logger.info(f"Logged number {number}, attendance, and count for user {message.user_id} in {duration:.6f}s")
 
             # --- Send Feedback (Reaction & Reply) ---
             if self.bot:
@@ -498,6 +548,13 @@ class NumberLogService:
                         await self.bot.send_reply(message.chat_id, message.message_id, hit_reply_text)
                     for forward_chat_id in forward_chat_ids:
                         await self.bot.forward_message(message.chat_id, message.message_id, forward_chat_id)
+
+                # Send achievement replies
+                for achievement in achievement_context.achievements:
+                    _, achievement_text = achievement
+                    if achievement_text:
+                        achievement_reply_text = "👏 Achievement Unlocked: " + achievement_text
+                        await self.bot.send_reply(message.chat_id, message.message_id, achievement_reply_text)
 
                 # Send match replies to the matched message IDs
                 for match in match_context.matches:
@@ -521,6 +578,10 @@ class NumberLogService:
                 streak_msg = f"{streak_total}-Streak!\n"
                 streak_msg += '🔥' * streak_total
                 await self.bot.send_message(message.chat_id, streak_msg)
+
+            # Send additional replies
+            for reply in additional_replies:
+                await self.bot.send_reply(message.chat_id, message.message_id, reply)
             # ---
 
         except Exception as e:

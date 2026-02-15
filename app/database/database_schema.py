@@ -118,6 +118,7 @@ class SchemaManager:
             numbers_bitmap  bit(128)     DEFAULT repeat('0', 128)::bit(128),
             last_login_date DATE         DEFAULT CURRENT_DATE,
             current_streak  INT          DEFAULT 0,
+            achievements    TEXT,
             extend_info     TEXT,
             CONSTRAINT uq_user_chat UNIQUE (user_id, chat_id)
         );
