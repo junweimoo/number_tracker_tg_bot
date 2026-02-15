@@ -359,17 +359,26 @@ class VisualizationService:
             if not G.nodes():
                 return None
 
+            # Prune nodes with less than 20 total matches
+            nodes_to_remove = [node for node, degree in G.degree(weight='weight') if degree < 20]
+            G.remove_nodes_from(nodes_to_remove)
+
+            if not G.nodes():
+                return None
+
             # 3. Plotting Setup
             standalone = ax is None
             if standalone:
                 plt.figure(figsize=(12, 10))
                 ax = plt.gca()
             
-            pos = nx.spring_layout(G, k=0.5, iterations=50)
+            # Increased k to spread nodes out more
+            pos = nx.kamada_kawai_layout(G)
             nodelist = list(G.nodes())
             
             # Node sizes based on total number counts
-            node_sizes = [float(max(300, user_count_map.get(uid, 0) * 50)) for uid in nodelist]
+            node_sizes = [float(min(5000, max(300, user_count_map.get(uid, 0) * 1))) for uid in nodelist]
+            # node_sizes = [300 for uid in nodelist]
 
             # Separate self-loops and other edges
             self_loops = [(u, v) for u, v in G.edges() if u == v]

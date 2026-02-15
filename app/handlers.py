@@ -405,7 +405,7 @@ async def visualize_personal_profile_handler(message, ctx):
         logger.info(f"Generated profile in {duration:.6f}s")
 
     if image_buf:
-        await bot.send_photo(message.chat_id, image_buf, caption=f"Personal Profile for {message.first_name}")
+        await bot.send_photo(message.chat_id, image_buf)
     else:
         await bot.send_message(message.chat_id, "No data available for your profile.")
 

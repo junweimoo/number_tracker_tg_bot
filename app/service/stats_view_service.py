@@ -241,7 +241,7 @@ class StatsViewService:
             
             if special_stats:
                 response_parts.append(replies.get("special_numbers_kings_title", "\nSpecial Numbers Kings:"))
-                response_parts.append(", ".join(special_stats))
+                response_parts.append("\n".join(special_stats))
 
             # --- Daily Section ---
             daily_section_header = replies.get("daily_section", "\n--- Today ({today}) ---").format(today=today)
@@ -273,8 +273,8 @@ class StatsViewService:
                     special_stats_daily.append(f"{num}: {name} ({top_user[1]})")
             
             if special_stats_daily:
-                response_parts.append(replies.get("special_numbers_kings_title", "\nSpecial Numbers Kings:"))
-                response_parts.append(", ".join(special_stats_daily))
+                response_parts.append(replies.get("special_numbers_kings_title", "\nSpecial Numbers:"))
+                response_parts.append("\n".join(special_stats_daily))
 
             return "\n".join(response_parts)
 

@@ -44,6 +44,8 @@ class Message:
         self.first_name = from_user.get('first_name')
         self.last_name = from_user.get('last_name')
 
+        self.via_bot = message_data.get('via_bot')
+
     def __repr__(self):
         return f"<Message chat_id={self.chat_id} user_id={self.user_id} text='{self.text}'>"
 
@@ -166,6 +168,8 @@ class TelegramBot:
 
         if text.startswith('/'):
             command = text.split()[0]
+            if '@' in command:
+                command = command.split('@')[0]
             if command in self.command_handlers:
                 try:
                     start_time = time.perf_counter()

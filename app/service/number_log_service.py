@@ -196,6 +196,7 @@ class NumberLogService:
         self.achievement_strategies = [
             ObtainAllNumbersAchievementStrategy(self.config, self.user_repo, self.db),
             GetSpecificNumberAchievementStrategy(0, AchievementType.GET_NUMBER_0, self.config, self.user_repo, self.db),
+            GetSpecificNumberAchievementStrategy(69, AchievementType.GET_NUMBER_69, self.config, self.user_repo, self.db),
             GetSpecificNumberAchievementStrategy(88, AchievementType.GET_NUMBER_88, self.config, self.user_repo, self.db),
             GetSpecificNumberAchievementStrategy(100, AchievementType.GET_NUMBER_100, self.config, self.user_repo, self.db)
         ]
@@ -389,7 +390,7 @@ class NumberLogService:
             return missing_numbers, new_bitmap
         return None, numbers_bitmap
 
-    async def process_number(self, message, number):
+    async def process_number(self, message, number, is_import=False):
         """
         Processes a logged number: checks for duplicates, updates attendance, 
         checks for hits/matches/achievements, and updates the database and caches.
@@ -397,6 +398,7 @@ class NumberLogService:
         Args:
             message: The message object containing the logged number.
             number (int): The number being logged.
+            is_import: Whether this is an import
         """
         try:
             start_time = time.perf_counter()
@@ -406,6 +408,18 @@ class NumberLogService:
                 ts = datetime.fromtimestamp(message.date, tz=timezone.utc)
             else:
                 ts = datetime.now(timezone.utc)
+
+            # Bot Whitelist Check
+            if is_import or str(message.user_id) in self.config.developer_user_ids:
+                pass
+            elif message.via_bot:
+                bot_username = message.via_bot.get('username')
+                if bot_username not in self.config.whitelisted_bot_names:
+                    logger.info(f"Ignored number {number} from non-whitelisted bot: {bot_username}")
+                    return
+            else:
+                logger.info(f"Ignored number {number} not sent via bot")
+                return
 
             # Duplicate Check (Debounce)
             if self._duplicate_check(message, number, ts):
@@ -571,23 +585,23 @@ class NumberLogService:
                 for match in match_context.matches:
                     match_type, msg_user_id, matched_user_id, matched_number, matched_msg_id, _ = match
 
-                    smaller_user_id, bigger_user_id = (msg_user_id, matched_user_id) \
+                    user1_id, user2_id = (msg_user_id, matched_user_id) \
                         if msg_user_id < matched_user_id \
                         else (matched_user_id, msg_user_id)
 
-                    user1_info = self.user_info_cache.get((smaller_user_id, message.chat_id))
+                    user1_info = self.user_info_cache.get((user1_id, message.chat_id))
                     user1_name = user1_info.user_name if user1_info else "Unknown"
 
-                    user2_info = self.user_info_cache.get((bigger_user_id, message.chat_id))
+                    user2_info = self.user_info_cache.get((user2_id, message.chat_id))
                     user2_name = user2_info.user_name if user2_info else "Unknown"
 
                     # Log the match
                     match_params = (
                         message.chat_id,
                         message.thread_id,
-                        msg_user_id,
+                        user1_id,
                         user1_name,
-                        matched_user_id,
+                        user2_id,
                         user2_name,
                         ts,
                         match_type.value,
@@ -600,8 +614,8 @@ class NumberLogService:
                     match_counts_params = (
                         message.chat_id,
                         message.thread_id,
-                        msg_user_id,
-                        matched_user_id,
+                        user1_id,
+                        user2_id,
                         match_type.value
                     )
                     transaction_queries.append((upsert_match_counts_query, match_counts_params))
@@ -669,7 +683,7 @@ class NumberLogService:
             logger.info(f"Logged number {number}, attendance, and count for user {message.user_id} in {duration:.6f}s")
 
             # --- Send Feedback (Reaction & Reply) ---
-            if self.bot and str(message.chat_id) not in self.config.silent_chat_ids:
+            if self.bot and not is_import and str(message.chat_id) not in self.config.silent_chat_ids:
                 tasks = []
 
                 # Send last hit reaction

@@ -89,4 +89,7 @@ class Config:
     def numbers_remaining_board(self):
         return self.data.get('numbers_remaining_board', {})
 
+    @property
+    def whitelisted_bot_names(self):
+        return self.data.get('whitelisted_bot_names', [])
 
