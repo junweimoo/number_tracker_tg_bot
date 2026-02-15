@@ -17,6 +17,24 @@ class SchemaManager:
         self.init_user_daily_number_counts()
         self.init_match_counts()
 
+    def clear_db(self):
+        """Clears all data from the tables."""
+        tables = [
+            "number_logs",
+            "match_logs",
+            "user_data",
+            "user_attendance",
+            "user_number_counts",
+            "user_daily_number_counts",
+            "match_counts"
+        ]
+        for table in tables:
+            try:
+                self.db._execute_query_sync(f"TRUNCATE TABLE {table} CASCADE;")
+                logger.info(f"Table '{table}' truncated.")
+            except Exception as e:
+                logger.error(f"Failed to truncate table '{table}': {e}")
+
     def init_number_logs(self):
         # 1. Create the base table
         create_table_query = """

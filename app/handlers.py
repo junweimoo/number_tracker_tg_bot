@@ -1,5 +1,6 @@
 import re
 import logging
+import os
 
 logger = logging.getLogger(__name__)
 
@@ -120,3 +121,47 @@ async def invoke_job_handler(message, ctx):
     except Exception as e:
         logger.error(f"Error invoking job {job_name}: {e}", exc_info=True)
         await bot.send_message(message.chat_id, f"Error invoking job {job_name}.")
+
+async def export_handler(message, ctx):
+    bot = ctx['bot']
+    config = ctx['config']
+    
+    if str(message.user_id) not in config.developer_user_ids:
+        await bot.send_message(message.chat_id, "You are not authorized to use this command.")
+        return
+
+    service = ctx['admin_service']
+    file_path = "number_logs_export.csv"
+    
+    try:
+        count = await service.export_number_logs(file_path)
+        await bot.send_message(message.chat_id, f"Exported {count} logs to {file_path}")
+    except Exception as e:
+        logger.error(f"Error exporting logs: {e}", exc_info=True)
+        await bot.send_message(message.chat_id, f"Error exporting logs: {e}")
+
+async def import_handler(message, ctx):
+    bot = ctx['bot']
+    config = ctx['config']
+    
+    if str(message.user_id) not in config.developer_user_ids:
+        await bot.send_message(message.chat_id, "You are not authorized to use this command.")
+        return
+
+    args = message.text.split()
+    clear_db = "--clear" in args
+    
+    service = ctx['admin_service']
+    file_path = "number_logs_export.csv"
+    
+    if not os.path.exists(file_path):
+        await bot.send_message(message.chat_id, f"Import file not found: {file_path}")
+        return
+
+    try:
+        await bot.send_message(message.chat_id, f"Starting import from {file_path} (clear_db={clear_db})...")
+        count = await service.import_number_logs(file_path, clear_db=clear_db)
+        await bot.send_message(message.chat_id, f"Successfully imported {count} logs.")
+    except Exception as e:
+        logger.error(f"Error importing logs: {e}", exc_info=True)
+        await bot.send_message(message.chat_id, f"Error importing logs: {e}")

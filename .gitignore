@@ -1,3 +1,4 @@
 .env
 .venv/
 .idea/
+number_logs_export.csv

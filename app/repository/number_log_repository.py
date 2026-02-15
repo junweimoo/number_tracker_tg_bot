@@ -64,3 +64,11 @@ class NumberLogRepository:
             ORDER BY bucket
             """
             return query, (chat_id, start_time)
+
+    async def get_all_logs(self):
+        query = """
+        SELECT id, chat_id, thread_id, user_id, user_name, ts, number
+        FROM number_logs
+        ORDER BY ts ASC
+        """
+        return await self.db.fetch_all(query)
