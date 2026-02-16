@@ -127,7 +127,7 @@ async def main():
     daily_backup_task = DailyBackupTask(admin_service, config)
 
     daily_backup_config = jobs_config.get("daily_backup")
-    scheduler.register_recurring_job(daily_backup_task.run_daily_backup(),
+    scheduler.register_recurring_job(daily_backup_task.run_daily_backup,
                                      int(daily_backup_config.get("h")),
                                      int(daily_backup_config.get("m")),
                                      int(daily_backup_config.get("s")),
