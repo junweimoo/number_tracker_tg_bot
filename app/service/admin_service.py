@@ -1,5 +1,6 @@
 import logging
 import csv
+import asyncio
 import io
 import os
 from datetime import datetime
@@ -154,25 +155,23 @@ class AdminService:
         rows.sort(key=lambda x: datetime.fromisoformat(x['ts']))
 
         count = 0
-        for row in rows:
-            ts = datetime.fromisoformat(row['ts'])
-            message = SimulatedMessage(
-                chat_id=int(row['chat_id']),
-                thread_id=int(row['thread_id']) if row['thread_id'] else None,
-                user_id=int(row['user_id']),
-                user_name=row['user_name'],
-                ts=ts
-            )
-            number = int(row['number'])
-            
-            # We bypass the bot's feedback during import by temporarily setting bot to None
-            original_bot = self.number_log_service.bot
-            self.number_log_service.bot = None
-            try:
+        try:
+            logging.disable(logging.INFO)
+            for row in rows:
+                ts = datetime.fromisoformat(row['ts'])
+                message = SimulatedMessage(
+                    chat_id=int(row['chat_id']),
+                    thread_id=int(row['thread_id']) if row['thread_id'] else None,
+                    user_id=int(row['user_id']),
+                    user_name=row['user_name'],
+                    ts=ts
+                )
+                number = int(row['number'])
+
                 await self.number_log_service.process_number(message, number, True)
                 count += 1
-            finally:
-                self.number_log_service.bot = original_bot
-                    
+        finally:
+            logging.disable(logging.NOTSET)
+
         logger.info(f"Imported {count} logs.")
         return count

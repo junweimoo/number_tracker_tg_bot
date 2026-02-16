@@ -494,11 +494,15 @@ async def import_handler(message, ctx):
     try:
         await bot.send_message(message.chat_id, f"Starting import (clear_db={clear_db})...")
 
-        start_time = time.perf_counter()
-        count = await service.import_number_logs(file_path, clear_db=clear_db)
-        duration = time.perf_counter() - start_time
+        lock_mgr = ctx['lock_manager']
+        global_lock = lock_mgr.get_global_lock()
 
-        await bot.send_message(message.chat_id, f"Successfully imported {count} logs in {duration:.4f}s.")
+        async with global_lock:
+            start_time = time.perf_counter()
+            count = await service.import_number_logs(file_path, clear_db=clear_db)
+            duration = time.perf_counter() - start_time
+
+            await bot.send_message(message.chat_id, f"Successfully imported {count} logs in {duration:.4f}s.")
     except Exception as e:
         logger.error(f"Error importing logs: {e}", exc_info=True)
         await bot.send_message(message.chat_id, f"Error importing logs: {e}")

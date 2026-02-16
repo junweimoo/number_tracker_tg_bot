@@ -196,7 +196,6 @@ class NumberLogService:
         self.achievement_strategies = [
             ObtainAllNumbersAchievementStrategy(self.config, self.user_repo, self.db),
             GetSpecificNumberAchievementStrategy(0, AchievementType.GET_NUMBER_0, self.config, self.user_repo, self.db),
-            GetSpecificNumberAchievementStrategy(69, AchievementType.GET_NUMBER_69, self.config, self.user_repo, self.db),
             GetSpecificNumberAchievementStrategy(88, AchievementType.GET_NUMBER_88, self.config, self.user_repo, self.db),
             GetSpecificNumberAchievementStrategy(100, AchievementType.GET_NUMBER_100, self.config, self.user_repo, self.db)
         ]
@@ -515,16 +514,7 @@ class NumberLogService:
             last_login_date = user_info.last_login_date
             new_streak = user_info.current_streak
 
-            should_mark_attendance = False
-            if last_login_date == today_date:
-                should_mark_attendance = False
-            else:
-                last_login_query = self.user_repo.get_last_login_date_query()
-                last_login_result = await self.db.fetch_one(last_login_query, (message.user_id, message.chat_id))
-                db_last_login_date = last_login_result[0] if last_login_result else None
-                if db_last_login_date != today_date:
-                    should_mark_attendance = True
-
+            should_mark_attendance = last_login_date != today_date
 
             if should_mark_attendance:
                 reply_str, new_streak = await self._mark_user_attendance(

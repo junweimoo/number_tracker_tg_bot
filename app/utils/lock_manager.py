@@ -12,6 +12,16 @@ class ChatLockManager:
         self.locks = WeakValueDictionary()
         self._global_lock = asyncio.Lock()
 
+    def get_global_lock(self):
+        """
+        Retrieves the global asyncio.Lock
+        Use only for imports
+
+        Returns:
+            asyncio.Lock: The global lock.
+        """
+        return self._global_lock
+
     async def get_lock(self, chat_id):
         """
         Retrieves or creates an asyncio.Lock for a specific chat_id.
