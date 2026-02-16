@@ -169,7 +169,9 @@ class TelegramBot:
         if text.startswith('/'):
             command = text.split()[0]
             if '@' in command:
-                command = command.split('@')[0]
+                parts = command.split('@')
+                command = parts[0]
+                bot = parts[1]
             if command in self.command_handlers:
                 try:
                     start_time = time.perf_counter()
