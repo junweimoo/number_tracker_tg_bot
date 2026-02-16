@@ -93,3 +93,7 @@ class Config:
     def whitelisted_bot_names(self):
         return self.data.get('whitelisted_bot_names', [])
 
+    @property
+    def backup_path(self):
+        return self.data.get('backup_path', 'number_logs_backup.csv')
+

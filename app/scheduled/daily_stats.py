@@ -7,7 +7,7 @@ class DailyStatsTask:
     """
     Scheduled task for generating and sending daily statistics to chats.
     """
-    def __init__(self, bot, stats_repository, chat_id, visualization_service, stats_view_service, config):
+    def __init__(self, bot, stats_repository, chat_id, visualization_service, stats_view_service, admin_service, config):
         """
         Initializes the DailyStatsTask.
 
@@ -24,6 +24,7 @@ class DailyStatsTask:
         self.chat_id = chat_id
         self.visualization_service = visualization_service
         self.stats_view_service = stats_view_service
+        self.admin_service = admin_service
         self.config = config
 
     async def run_midnight_stats(self):

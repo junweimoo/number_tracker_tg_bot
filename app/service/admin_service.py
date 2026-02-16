@@ -3,6 +3,8 @@ import csv
 import io
 import os
 from datetime import datetime
+
+from scheduled.daily_backup import DailyBackupTask
 from scheduled.daily_stats import DailyStatsTask
 from database.database_schema import SchemaManager
 
@@ -72,19 +74,27 @@ class AdminService:
         """
         logger.info(f"Invoking job {job_name} for chat {chat_id}")
 
-        task = DailyStatsTask(
+        stats_task = DailyStatsTask(
             self.bot,
             self.stats_repository,
             chat_id,
             self.visualization_service,
             self.stats_view_service,
+            self,
+            self.config
+        )
+
+        backup_task = DailyBackupTask(
+            self,
             self.config
         )
 
         if job_name == 'midnight_stats':
-            await task.run_midnight_stats()
+            await stats_task.run_midnight_stats()
         elif job_name == 'midday_stats':
-            await task.run_midday_stats()
+            await stats_task.run_midday_stats()
+        elif job_name == 'daily_backup':
+            await backup_task.run_daily_backup()
         else:
             raise ValueError(f"Unknown job name: {job_name}")
 

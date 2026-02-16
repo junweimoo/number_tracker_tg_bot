@@ -12,6 +12,7 @@ from handlers import (
     visualize_my_time_series_handler, visualize_my_num_counts_handler, visualize_my_num_counts_grid_handler,
     visualize_chat_match_graph_handler, visualize_my_match_graph_handler, visualize_personal_profile_handler,
     invoke_job_handler, export_handler, import_handler)
+from scheduled.daily_backup import DailyBackupTask
 from service.number_log_service import NumberLogService
 from service.stats_view_service import StatsViewService
 from service.visualization_service import VisualizationService
@@ -121,11 +122,21 @@ async def main():
     bot.register_message_handler(number_parser_handler)
 
     # Register Tasks
+    jobs_config = config.scheduled_jobs
+
+    daily_backup_task = DailyBackupTask(admin_service, config)
+
+    daily_backup_config = jobs_config.get("daily_backup")
+    scheduler.register_recurring_job(daily_backup_task.run_daily_backup(),
+                                     int(daily_backup_config.get("h")),
+                                     int(daily_backup_config.get("m")),
+                                     int(daily_backup_config.get("s")),
+                                     tz)
+
     stats_chat_ids = getattr(config, 'daily_stats_chat_ids', None)
     for chat_id in stats_chat_ids:
-        jobs_config = config.scheduled_jobs
         daily_stats_task = DailyStatsTask(bot, repositories['stats'], chat_id,
-                                          visualization_service, stats_view_service, config)
+                                          visualization_service, stats_view_service, admin_service, config)
 
         midnight_stats_config = jobs_config.get("midnight_stats")
         scheduler.register_recurring_job(daily_stats_task.run_midnight_stats,
