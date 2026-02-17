@@ -6,6 +6,10 @@ from datetime import datetime, timedelta, timezone
 
 logger = logging.getLogger(__name__)
 
+def _get_today_date_tz(config):
+    tz = timezone(timedelta(hours=config.timezone_gmt))
+    return datetime.now(tz).date()
+
 def _get_start_date(message_text, config):
     """
     Determines the start date for filtering data based on the message text.
@@ -20,8 +24,7 @@ def _get_start_date(message_text, config):
     if "alltime" in message_text:
         return None
     
-    tz = timezone(timedelta(hours=config.timezone_gmt))
-    return datetime.now(tz).date()
+    return _get_today_date_tz(config)
 
 async def start_handler(message, ctx):
     """
@@ -114,8 +117,10 @@ async def leaderboard_handler(message, ctx):
         ctx (dict): The context dictionary.
     """
     bot = ctx['bot']
-
     service = ctx['stats_view_service']
+    config = ctx['config']
+
+    stats_date = _get_today_date_tz(config)
 
     lock_mgr = ctx['lock_manager']
     lock = await lock_mgr.get_lock(message.chat_id)
@@ -123,7 +128,7 @@ async def leaderboard_handler(message, ctx):
     async with lock:
         start_time = time.perf_counter()
 
-        response = await service.get_leaderboard(message.chat_id)
+        response = await service.get_leaderboard(message.chat_id, stats_date=stats_date)
 
         duration = time.perf_counter() - start_time
         logger.info(f"Fetched leaderboard in {duration:.6f}s")

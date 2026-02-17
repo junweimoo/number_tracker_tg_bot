@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 logger = logging.getLogger(__name__)
 
@@ -34,8 +34,9 @@ class DailyStatsTask:
         """
         try:
             logger.info(f"Running daily midnight stats for chat {self.chat_id}...")
-            yesterday = datetime.now() - timedelta(days=1)
-            yesterday_date = yesterday.date()
+            tz = timezone(timedelta(hours=self.config.timezone_gmt))
+            today_date = datetime.now(tz).date()
+            yesterday_date = today_date - timedelta(days=1)
 
             # 1. Visualization of numbers obtained from the previous day
             viz_buf = await self.visualization_service.generate_number_count_visualization_grid(
@@ -52,7 +53,7 @@ class DailyStatsTask:
                 await self.bot.send_photo(self.chat_id, ts_viz_buf, caption=f"Activity in the past 24 hours")
 
             # 3. Leaderboard
-            leaderboard_text = await self.stats_view_service.get_leaderboard(self.chat_id)
+            leaderboard_text = await self.stats_view_service.get_leaderboard(self.chat_id, stats_date=yesterday_date)
             if leaderboard_text:
                 await self.bot.send_html(self.chat_id, leaderboard_text)
 
@@ -69,7 +70,8 @@ class DailyStatsTask:
         """
         try:
             logger.info(f"Running daily midday stats for chat {self.chat_id}...")
-            today_date = datetime.now().date()
+            tz = timezone(timedelta(hours=self.config.timezone_gmt))
+            today_date = datetime.now(tz).date()
 
             # 1. Visualization of numbers obtained today
             viz_buf = await self.visualization_service.generate_number_count_visualization_grid(

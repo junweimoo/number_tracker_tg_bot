@@ -163,12 +163,13 @@ class StatsViewService:
             logger.error(f"Error calculating stats summary: {e}", exc_info=True)
             return "An error occurred while fetching your stats."
 
-    async def get_leaderboard(self, chat_id):
+    async def get_leaderboard(self, chat_id, stats_date=None):
         """
         Generates a leaderboard for the chat, including all-time and daily statistics.
 
         Args:
             chat_id (int): The ID of the chat.
+            stats_date: The date to query for today's leaderboard
 
         Returns:
             str: A formatted string containing the leaderboard.
@@ -176,25 +177,26 @@ class StatsViewService:
         try:
             # Determine today's date based on config timezone
             tz_offset = self.config.timezone_gmt
-            tz = timezone(timedelta(hours=tz_offset))
+            tz = timezone(timedelta(hours=self.config.timezone_gmt))
             tz_str = f"{'+' if tz_offset >= 0 else '-'}{abs(tz_offset):02}"
-            today = datetime.now(tz).date()
+            if not stats_date:
+                stats_date = datetime.now(tz).date()
             special_numbers = self.config.hit_numbers.keys()
 
             # Prepare all coroutines for parallel execution
             tasks = [
                 self.user_repo.get_all_users_in_chat(chat_id),
-                self.stats_repo.get_top_users_by_count(chat_id, limit=3),
+                self.stats_repo.get_top_users_by_count(chat_id, limit=5),
                 self.match_log_repo.get_top_matched_pairs(chat_id, limit=3),
-                self.stats_repo.get_top_users_by_count_daily(chat_id, today, limit=3),
-                self.match_log_repo.get_top_matched_pairs_daily(chat_id, today, tz_str, limit=3)
+                self.stats_repo.get_top_users_by_count_daily(chat_id, stats_date, limit=5),
+                self.match_log_repo.get_top_matched_pairs_daily(chat_id, stats_date, tz_str, limit=3)
             ]
             
             # Add special number tasks
             for num in special_numbers:
                 tasks.append(self.stats_repo.get_top_user_for_number(chat_id, num))
             for num in special_numbers:
-                tasks.append(self.stats_repo.get_top_user_for_number_daily(chat_id, num, today))
+                tasks.append(self.stats_repo.get_top_user_for_number_daily(chat_id, num, stats_date))
 
             # Execute all tasks concurrently
             results = await asyncio.gather(*tasks)
@@ -244,7 +246,7 @@ class StatsViewService:
                 response_parts.append("\n".join(special_stats))
 
             # --- Daily Section ---
-            daily_section_header = replies.get("daily_section", "\n--- Today ({today}) ---").format(today=today)
+            daily_section_header = replies.get("daily_section", "\n--- Today ({today}) ---").format(today=stats_date)
             response_parts.append(daily_section_header)
 
             # 1. Top 3 users with highest counts (Daily)

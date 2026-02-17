@@ -31,6 +31,9 @@ class Scheduler:
             context (dict, optional): Optional context dictionary to pass to the function.
             is_recurring (bool): Whether the task is recurring. Defaults to False.
         """
+        # Ensure run_time is timezone-aware and normalized to UTC
+        run_time = run_time.astimezone(timezone.utc)
+
         self.jobs.append({
             'func': func,
             'run_time': run_time,
@@ -83,8 +86,6 @@ class Scheduler:
         if target_time <= now:
             target_time += timedelta(days=1)
 
-        target_time_naive = target_time.astimezone().replace(tzinfo=None)
-
         original_func = job_config['func']
 
         async def recurring_wrapper(ctx=None):
@@ -97,7 +98,7 @@ class Scheduler:
                 self._schedule_next_run(job_config)
         
         # Register the wrapped job
-        self.register_job(recurring_wrapper, target_time_naive, job_config['context'], True)
+        self.register_job(recurring_wrapper, target_time, job_config['context'], True)
 
     def start_worker(self):
         """Starts the background worker task."""
@@ -121,7 +122,7 @@ class Scheduler:
         self.running = True
         logger.info("Scheduler started.")
         while self.running:
-            now = datetime.now()
+            now = datetime.now(timezone.utc)
             
             # Check for jobs that are due
             while self.jobs and self.jobs[0]['run_time'] <= now:
