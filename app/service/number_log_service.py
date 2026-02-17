@@ -240,7 +240,7 @@ class NumberLogService:
         except Exception as e:
             logger.error(f"Failed to precache user data: {e}")
 
-    def _duplicate_check(self, message, number, ts):
+    def _duplicate_check(self, message, number, ts, cooldown_seconds=65):
         """
         Checks if the logged number is a duplicate within a short timeframe.
 
@@ -260,7 +260,7 @@ class NumberLogService:
             if history:
                 last_number, last_ts, last_msg_id = history[-1]
                 time_diff = (ts - last_ts).total_seconds()
-                if last_number == number and time_diff < 60:
+                if last_number == number and time_diff < cooldown_seconds:
                     logger.info(
                         f"Ignored duplicate number {number} for user {message.user_id} "
                         f"(last logged {time_diff:.1f}s ago).")
@@ -421,7 +421,7 @@ class NumberLogService:
                 return
 
             # Duplicate Check (Debounce)
-            if self._duplicate_check(message, number, ts):
+            if self._duplicate_check(message, number, ts, self.config.number_cooldown_seconds):
                 return
 
             # Calculate Singapore Time (GMT+8) for attendance

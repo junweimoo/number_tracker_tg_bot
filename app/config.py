@@ -97,3 +97,6 @@ class Config:
     def backup_path(self):
         return self.data.get('backup_path', 'number_logs_backup.csv')
 
+    @property
+    def number_cooldown_seconds(self):
+        return int(self.data.get('number_cooldown_seconds', '65'))
