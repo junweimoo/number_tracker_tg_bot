@@ -499,10 +499,19 @@ class VisualizationService:
             counts_str = "\n".join(counts_list) if counts_list else "No numbers recorded yet."
 
             most_frequent_str = "N/A"
+            is_results_truncated = False
+            truncated_results = []
             if most_frequent_results:
-                numbers = [str(row[0]) for row in most_frequent_results]
-                freq_count = most_frequent_results[0][1]
-                most_frequent_str = f"{', '.join(numbers)} (Count: {freq_count})"
+                if len(most_frequent_results) > 8:
+                    is_results_truncated = True
+                    truncated_results = most_frequent_results[:8]
+                else:
+                    is_results_truncated = False
+                    truncated_results = most_frequent_results
+
+                numbers = [str(row[0]) for row in truncated_results]
+                freq_count = truncated_results[0][1]
+                most_frequent_str = f"{', '.join(numbers)} {'...' if is_results_truncated else ''} (Count: {freq_count})"
 
             top_matches_str = "None"
             if top_matches:
