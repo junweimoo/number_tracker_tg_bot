@@ -40,6 +40,8 @@ class MatchContext:
         self.matches = []
         # Set of MatchType
         self.types = set()
+        # Number of matches strategies that hit (some match strategies return >1 matches)
+        self.matched_strategy_count = 0
 
     def add_match(self, match_type, message_user_id, matched_user_id, matched_number, matched_message_id, reply_text):
         """

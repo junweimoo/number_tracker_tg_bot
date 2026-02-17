@@ -480,6 +480,9 @@ class NumberLogService:
                 if strategy.has_conflict(match_context):
                     continue
                 results = strategy.check(message, number, cache_data)
+                if not results:
+                    continue
+                match_context.matched_strategy_count += 1
                 for result in results:
                     match_context.add_match(
                         result.match_type,
@@ -496,7 +499,7 @@ class NumberLogService:
 
             # --- Streak Logic ---
             chat_id = message.chat_id
-            current_matches = len(match_context.matches)
+            current_matches = match_context.matched_strategy_count
             current_hits = len([hit for hit in hit_context.hits if hit[5]])
 
             if (current_matches + current_hits) > 0:
