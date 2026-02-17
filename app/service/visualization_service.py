@@ -90,7 +90,7 @@ class VisualizationService:
             
             color = '#90EE90' # Light green
             edge_color = '#228B22' # Forest green
-            ax.bar(numbers, counts, color=color, edgecolor=edge_color, alpha=0.7)
+            ax.bar(numbers, counts, color=color, edgecolor=edge_color, alpha=0.7, width=0.8)
             
             # Determine user name for title if specific user
             user_info = ""
@@ -105,7 +105,7 @@ class VisualizationService:
             
             # Set x-axis limits and ticks
             ax.set_xlim(-1, 101)
-            ax.set_xticks(range(0, 101, 10))  # Ticks every 10 numbers for profile view
+            ax.set_xticks(range(0, 101, 5))  # Ticks every 10 numbers for profile view
             
             # Ensure y-axis has integer ticks
             ax.yaxis.set_major_locator(ticker.MaxNLocator(integer=True))
@@ -302,6 +302,10 @@ class VisualizationService:
             
             # X-axis date formatting
             ax.xaxis.set_major_formatter(date_fmt)
+            if hourly_buckets:
+                ax.xaxis.set_major_locator(mdates.HourLocator(interval=5))
+            else:
+                ax.xaxis.set_major_locator(mdates.DayLocator(interval=5))
             # Rotate dates manually if not standalone
             for label in ax.get_xticklabels():
                 label.set_rotation(30)

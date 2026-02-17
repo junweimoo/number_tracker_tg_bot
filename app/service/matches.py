@@ -230,7 +230,7 @@ class ReverseNumberMatchStrategy(MatchStrategy):
         
         tens = number // 10
         ones = number % 10
-        if tens == ones:
+        if tens == ones or tens == 0 or ones == 0:
             return []
             
         chat_log = cache_data.chat_log_cache.get(message.chat_id)
@@ -279,7 +279,7 @@ class SelfReverseNumberMatchStrategy(MatchStrategy):
 
         tens = number // 10
         ones = number % 10
-        if tens == ones:
+        if tens == ones or tens == 0 or ones == 0:
             return []
 
         user_log = cache_data.user_log_cache.get((message.user_id, message.chat_id))
