@@ -6,7 +6,7 @@ import matplotlib.colors as mcolors
 import io
 import asyncio
 import networkx as nx
-import numpy as np
+import copy
 from datetime import datetime, timedelta, timezone, date
 from matplotlib.gridspec import GridSpec
 from matplotlib.patches import Rectangle
@@ -37,6 +37,8 @@ class VisualizationService:
         self.number_log_repo = repositories['number_log']
         self.stats_view_service = None # Will be set later or injected
 
+        self.rainbow_border_patches = self._generate_rainbow_border_patches()
+
     def set_bot(self, bot):
         """
         Sets the bot instance.
@@ -54,6 +56,43 @@ class VisualizationService:
             service: The stats view service instance.
         """
         self.stats_view_service = service
+
+    def _generate_rainbow_border_patches(self):
+        """
+        Generates the list of Rectangle patches for the rainbow border.
+        These are figure-relative coordinates (0 to 1).
+        """
+        patches = []
+        border_width = 0.015
+        ratio = 0.6
+        n_colors = 100
+        rainbow_cmap = plt.get_cmap('gist_rainbow')
+
+        # Top border
+        for i in range(n_colors):
+            rect = Rectangle((i/n_colors, 1-border_width), 1/n_colors, border_width, 
+                             color=rainbow_cmap(i/n_colors), zorder=5)
+            patches.append(rect)
+        
+        # Bottom border
+        for i in range(n_colors):
+            rect = Rectangle((i/n_colors, 0), 1/n_colors, border_width, 
+                             color=rainbow_cmap(1 - i/n_colors), zorder=5)
+            patches.append(rect)
+            
+        # Left border
+        for i in range(n_colors):
+            rect = Rectangle((0, i/n_colors), border_width*ratio, 1/n_colors,
+                             color=rainbow_cmap(1 - i/n_colors), zorder=5)
+            patches.append(rect)
+            
+        # Right border
+        for i in range(n_colors):
+            rect = Rectangle((1-border_width*ratio, i/n_colors), border_width*ratio, 1/n_colors,
+                             color=rainbow_cmap(i/n_colors), zorder=5)
+            patches.append(rect)
+            
+        return patches
 
     async def generate_number_count_visualization(self, chat_id, user_id=None, start_date=None, ax=None):
         """
@@ -563,35 +602,12 @@ class VisualizationService:
             await self.generate_time_series_visualization(chat_id, user_id=user_id, hourly_buckets=False, buckets=48, ax=ax_time)
             
             # --- Rainbow Border ---
-            # Create a rainbow gradient border using multiple rectangles
-            border_width = 0.015
-            ratio = 0.6
-            n_colors = 100
-            rainbow_cmap = plt.get_cmap('gist_rainbow')
-            
-            # Top border
-            for i in range(n_colors):
-                rect = Rectangle((i/n_colors, 1-border_width), 1/n_colors, border_width, 
-                                 transform=fig.transFigure, color=rainbow_cmap(i/n_colors), zorder=5)
-                fig.patches.append(rect)
-            
-            # Bottom border
-            for i in range(n_colors):
-                rect = Rectangle((i/n_colors, 0), 1/n_colors, border_width, 
-                                 transform=fig.transFigure, color=rainbow_cmap(1 - i/n_colors), zorder=5)
-                fig.patches.append(rect)
-                
-            # Left border
-            for i in range(n_colors):
-                rect = Rectangle((0, i/n_colors), border_width*ratio, 1/n_colors,
-                                 transform=fig.transFigure, color=rainbow_cmap(1 - i/n_colors), zorder=5)
-                fig.patches.append(rect)
-                
-            # Right border
-            for i in range(n_colors):
-                rect = Rectangle((1-border_width*ratio, i/n_colors), border_width*ratio, 1/n_colors,
-                                 transform=fig.transFigure, color=rainbow_cmap(i/n_colors), zorder=5)
-                fig.patches.append(rect)
+            # Use pre-calculated patches
+            # We must copy the patch because a patch can only be in one figure at a time.
+            for patch in self.rainbow_border_patches:
+                p = copy.copy(patch)
+                p.set_transform(fig.transFigure) # Ensure transform is set to the new figure
+                fig.patches.append(p)
 
             # Save to buffer
             buf = io.BytesIO()
