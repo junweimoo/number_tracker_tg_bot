@@ -3,7 +3,6 @@ import logging
 import psycopg2
 from psycopg2 import pool
 import asyncio
-from concurrent.futures import ThreadPoolExecutor
 
 logger = logging.getLogger(__name__)
 
@@ -11,7 +10,7 @@ class Database:
     """
     Core database class for managing PostgreSQL connections and executing queries.
     """
-    def __init__(self):
+    def __init__(self, executor=None):
         """
         Initializes the Database instance, setting up the connection pool and executor.
         """
@@ -23,7 +22,7 @@ class Database:
         
         self.connection_pool = None
         self._initialize_pool()
-        self.executor = ThreadPoolExecutor(max_workers=8)
+        self.executor = executor
 
     def _initialize_pool(self):
         """

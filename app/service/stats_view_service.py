@@ -8,7 +8,7 @@ class StatsViewService:
     """
     Service responsible for generating text-based statistics views and leaderboards.
     """
-    def __init__(self, db, config, repositories, bot=None):
+    def __init__(self, db, config, repositories, bot=None, executor=None):
         """
         Initializes the StatsViewService.
 
@@ -25,6 +25,7 @@ class StatsViewService:
         self.attendance_repo = repositories['attendance']
         self.match_log_repo = repositories['match_log']
         self.user_repo = repositories['user']
+        self.executor = executor
 
     def set_bot(self, bot):
         """

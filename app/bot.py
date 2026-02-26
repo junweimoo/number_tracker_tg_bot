@@ -5,7 +5,6 @@ import urllib.request
 import urllib.parse
 import time
 import requests
-from concurrent.futures import ThreadPoolExecutor
 from utils.lock_manager import ChatLockManager
 
 logging.basicConfig(
@@ -53,7 +52,7 @@ class TelegramBot:
     """
     A simple Telegram bot implementation using polling.
     """
-    def __init__(self, token, context=None):
+    def __init__(self, token, context=None, executor=None):
         """
         Initializes the TelegramBot.
 
@@ -66,7 +65,7 @@ class TelegramBot:
         self.command_handlers = {}
         self.message_handlers = []
         self.offset = 0
-        self.executor = ThreadPoolExecutor(max_workers=8)
+        self.executor = executor
         self.context = context if context is not None else {}
         self.context['bot'] = self
         self.context['lock_manager'] = ChatLockManager()
