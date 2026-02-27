@@ -77,7 +77,7 @@
     "\n<b>Top matches:</b>",
     "{top_matches}",
     "\n<b>Current Streak:</b>",
-    "{streak} days \uD83D\uDD25",
+    "{streak} \uD83D\uDD25",
     "\n<b>Achievements:</b>",
     "{achievements}"
   ],

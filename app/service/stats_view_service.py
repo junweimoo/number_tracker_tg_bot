@@ -156,7 +156,7 @@ class StatsViewService:
                 counts=counts_str,
                 most_frequent=most_frequent_str,
                 top_matches=top_matches_str,
-                streak=f"{current_streak}",
+                streak=f"{current_streak} day{'s' if current_streak > 1 else ''}",
                 achievements=achievements_str
             )
 

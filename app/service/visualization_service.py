@@ -631,6 +631,7 @@ class VisualizationService:
                 top_matches_str = "\n".join(match_names)
 
             current_streak = streak_result[0] if streak_result else 0
+            max_streak = streak_result[1] if streak_result else 0
 
             # Format the response using config
             profile_template = "\n".join(self.config.profile_text)
@@ -642,7 +643,7 @@ class VisualizationService:
                 counts=counts_str,
                 most_frequent=most_frequent_str,
                 top_matches=top_matches_str,
-                streak=f"{current_streak}",
+                streak=f"{current_streak} day{'s' if current_streak > 1 else ''}",
                 achievements=achievements_str
             )
 

@@ -51,7 +51,7 @@ class UserRepository:
         Returns:
             str: The SQL query string.
         """
-        return "SELECT current_streak FROM user_data WHERE user_id = %s AND chat_id = %s"
+        return "SELECT current_streak, max_streak FROM user_data WHERE user_id = %s AND chat_id = %s"
 
     def get_last_login_date_query(self):
         """
