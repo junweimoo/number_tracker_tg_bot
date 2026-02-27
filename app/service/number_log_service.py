@@ -288,9 +288,12 @@ class NumberLogService:
             message.user_id,
             message.chat_id,
             today_date,
+            user_name,
             today_date,
             yesterday_date,
-            today_date
+            today_date,
+            today_date,
+            yesterday_date
         )
 
         # B. Insert into user_attendance (idempotent)

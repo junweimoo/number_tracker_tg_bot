@@ -21,14 +21,14 @@ class UserRepository:
         - If last_login_date is older (or null): reset streak to 1, update date
         
         Expected Params Order: 
-        [user_id, chat_id, today_date, today_date, yesterday_date, today_date]
+        [user_id, chat_id, today_date, user_name, today_date, yesterday_date, today_date, today_date, yesterday_date]
 
         Returns:
             str: The SQL query string.
         """
         return """
-        INSERT INTO user_data (user_id, chat_id, current_streak, last_login_date, user_name)
-        VALUES (%s, %s, 1, %s, 'Unknown')
+        INSERT INTO user_data (user_id, chat_id, current_streak, last_login_date, user_name, max_streak)
+        VALUES (%s, %s, 1, %s, %s, 1)
         ON CONFLICT (user_id, chat_id) DO UPDATE
         SET 
             current_streak = CASE 
@@ -36,7 +36,12 @@ class UserRepository:
                 WHEN user_data.last_login_date = %s THEN user_data.current_streak + 1
                 ELSE 1
             END,
-            last_login_date = %s
+            last_login_date = %s,
+            max_streak = GREATEST(COALESCE(user_data.max_streak, 0), CASE 
+                WHEN user_data.last_login_date = %s THEN user_data.current_streak
+                WHEN user_data.last_login_date = %s THEN user_data.current_streak + 1
+                ELSE 1
+            END)
         """
 
     def get_fetch_streak_query(self):
