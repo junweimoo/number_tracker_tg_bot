@@ -144,3 +144,33 @@ class MatchLogRepository:
         LIMIT %s
         """
         return await self.db.fetch_all(query, (chat_id, timezone_str, date, limit))
+
+    async def get_match_type_counts(self, chat_id, user_id=None):
+        """
+        Fetches the counts of each match type for a chat, optionally filtered by user.
+
+        Args:
+            chat_id (int): The ID of the chat.
+            user_id (int, optional): The ID of the user. Defaults to None.
+
+        Returns:
+            list: A list of tuples containing (match_type, count).
+        """
+        if user_id:
+            query = """
+            SELECT match_type, sum(count) as total_count
+            FROM match_counts
+            WHERE chat_id = %s AND (user_id_1 = %s OR user_id_2 = %s)
+            GROUP BY match_type
+            ORDER BY total_count DESC
+            """
+            return await self.db.fetch_all(query, (chat_id, user_id, user_id))
+        else:
+            query = """
+            SELECT match_type, sum(count) as total_count
+            FROM match_counts
+            WHERE chat_id = %s
+            GROUP BY match_type
+            ORDER BY total_count DESC
+            """
+            return await self.db.fetch_all(query, (chat_id,))

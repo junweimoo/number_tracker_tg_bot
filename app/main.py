@@ -11,7 +11,7 @@ from handlers import (
     visualize_group_time_series_handler, visualize_group_num_counts_handler, visualize_group_num_counts_grid_handler,
     visualize_my_time_series_handler, visualize_my_num_counts_handler, visualize_my_num_counts_grid_handler,
     visualize_chat_match_graph_handler, visualize_my_match_graph_handler, visualize_personal_profile_handler,
-    invoke_job_handler, export_handler, import_handler)
+    invoke_job_handler, export_handler, import_handler, chat_match_proportions_handler)
 from scheduled.daily_backup import DailyBackupTask
 from service.number_log_service import NumberLogService
 from service.stats_view_service import StatsViewService
@@ -102,6 +102,7 @@ async def main():
     bot.register_command_handler('/leaderboard', leaderboard_handler)
     bot.register_command_handler('/myremainingnums', my_remaining_nums_handler)
     bot.register_command_handler('/myprofile', visualize_personal_profile_handler)
+    bot.register_command_handler("/chatmatches", chat_match_proportions_handler)
 
     # Group visualizations
     bot.register_command_handler('/chatcounthist', visualize_group_num_counts_handler)

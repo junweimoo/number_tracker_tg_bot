@@ -35,6 +35,21 @@
     "reply_message": "I detected the number: {number}",
     "new_day_message": "\uD83E\uDD17 New day! \uD83E\uDD17"
   },
+  "match_type_display_names": {
+    "SAME_NUMBER_LAST": "Same Number",
+    "REVERSE_NUMBER_LAST": "Reverse Number",
+    "SUM_TARGET": "Sum to Target",
+    "ABC_SUM": "ABC Sum",
+    "DOUBLE_LAST": "Double",
+    "HALF_LAST": "Half",
+    "STEP_UP": "Step Up",
+    "STEP_DOWN": "Step Down",
+    "SQUARE_LAST": "Square",
+    "SQRT_LAST": "Square Root",
+    "ARITHMETIC_PROGRESSION": "Arithmetic Progression",
+    "GEOMETRIC_PROGRESSION": "Geometric Progression",
+    "DIGIT_SUM": "Digit Sum"
+  },
   "match_replies": {
     "SAME_NUMBER_LAST": "{u1} and {u2} matched!",
     "SAME_NUMBER_LAST_SELF": "{u1} self-matched!",

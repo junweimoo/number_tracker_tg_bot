@@ -62,6 +62,10 @@ class Config:
         return self.data.get('match_replies', {})
 
     @property
+    def match_type_display_names(self):
+        return self.data.get('match_type_display_names', {})
+
+    @property
     def attendance_replies(self):
         return self.data.get('attendance_replies', [])
 

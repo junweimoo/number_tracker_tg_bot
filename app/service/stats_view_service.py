@@ -354,3 +354,37 @@ class StatsViewService:
         except Exception as e:
             logger.error(f"Error generating remaining numbers view: {e}", exc_info=True)
             return "An error occurred while fetching remaining numbers."
+
+    async def get_match_proportions(self, chat_id, user_id=None):
+        """
+        Fetches the counts of each type of match for the chat_id and optionally the user_id,
+        calculates the percentage of each match type, and returns a formatted string.
+
+        Args:
+            chat_id (int): The ID of the chat.
+            user_id (int, optional): The ID of the user. Defaults to None.
+
+        Returns:
+            str: A formatted string containing the match proportions.
+        """
+        try:
+            match_counts = await self.match_log_repo.get_match_type_counts(chat_id, user_id)
+            if not match_counts:
+                return "No matches recorded yet."
+
+            total_matches = sum(count for _, count in match_counts)
+            if total_matches == 0:
+                return "No matches recorded yet."
+
+            response_parts = ["📊 <b>Match Proportions</b> 📊\n"]
+            
+            for match_type, count in match_counts:
+                percentage = round((count / total_matches) * 100, 2)
+                display_name = self.config.match_type_display_names.get(match_type, match_type)
+                response_parts.append(f"{display_name}: {percentage}% ({count})")
+
+            return "\n".join(response_parts)
+
+        except Exception as e:
+            logger.error(f"Error generating match proportions: {e}", exc_info=True)
+            return "An error occurred while fetching match proportions."
