@@ -160,6 +160,31 @@ async def chat_match_proportions_handler(message, ctx):
 
     await bot.send_html(message.chat_id, response)
 
+async def my_match_proportions_handler(message, ctx):
+    """
+    Handles the /leaderboard command, providing the chat's leaderboard.
+
+    Args:
+        message: The message object.
+        ctx (dict): The context dictionary.
+    """
+    bot = ctx['bot']
+    service = ctx['stats_view_service']
+    config = ctx['config']
+
+    lock_mgr = ctx['lock_manager']
+    lock = await lock_mgr.get_lock(message.chat_id)
+
+    async with lock:
+        start_time = time.perf_counter()
+
+        response = await service.get_match_proportions(message.chat_id, message.user_id)
+
+        duration = time.perf_counter() - start_time
+        logger.info(f"Fetched match proportions in {duration:.6f}s")
+
+    await bot.send_html(message.chat_id, response)
+
 async def my_remaining_nums_handler(message, ctx):
     """
     Handles the /myremainingnums command, providing a list of remaining numbers for users in the chat.

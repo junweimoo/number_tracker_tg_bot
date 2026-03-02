@@ -376,7 +376,7 @@ class StatsViewService:
             if total_matches == 0:
                 return "No matches recorded yet."
 
-            response_parts = ["📊 <b>Match Proportions</b> 📊\n"]
+            response_parts = ["📊 <b>Match Proportions</b> 📊", f"Total matches: {total_matches}\n"]
             
             for match_type, count in match_counts:
                 percentage = round((count / total_matches) * 100, 2)
