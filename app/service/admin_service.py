@@ -16,7 +16,7 @@ class SimulatedMessage:
     """
     A mock message object used to simulate Telegram messages during data import.
     """
-    def __init__(self, chat_id, thread_id, user_id, user_name, ts, message_id=0):
+    def __init__(self, chat_id, thread_id, user_id, user_name, ts, user_handle=None, message_id=0):
         """
         Initializes a SimulatedMessage.
 
@@ -36,7 +36,7 @@ class SimulatedMessage:
 
         self.first_name = user_name
         self.last_name = None
-        self.username = None
+        self.username = user_handle
 
 class AdminService:
     """
@@ -59,6 +59,7 @@ class AdminService:
         self.repositories = repositories
         self.stats_repository = repositories['stats']
         self.number_log_repository = repositories['number_log']
+        self.user_repository = repositories['user']
         self.visualization_service = visualization_service
         self.number_log_service = number_log_service
         self.stats_view_service = stats_view_service
@@ -123,11 +124,25 @@ class AdminService:
         logger.info(f"Exporting number logs to {file_path}")
         logs = await self.number_log_repository.get_all_logs()
         
+        # Fetch all users to map user_id to user_handle
+        users_query = self.user_repository.get_all_users_query()
+        users = await self.db.fetch_all(users_query)
+        # (user_id, chat_id) ->user_handle
+        user_handle_map = {}
+        for user in users:
+            chat_id = user[1]
+            user_id = user[3]
+            user_handle = user[5]
+            user_handle_map[(user_id, chat_id)] = user_handle
+
         with open(file_path, mode='w', newline='', encoding='utf-8') as f:
             writer = csv.writer(f)
-            writer.writerow(['id', 'chat_id', 'thread_id', 'user_id', 'user_name', 'ts', 'number'])
+            writer.writerow(['id', 'chat_id', 'thread_id', 'user_id', 'user_name', 'user_handle', 'ts', 'number'])
             for log in logs:
-                writer.writerow(log)
+                # log tuple: (id, chat_id, thread_id, user_id, user_name, ts, number)
+                log_id, chat_id, thread_id, user_id, user_name, ts, number = log
+                user_handle = user_handle_map.get((user_id, chat_id), "")
+                writer.writerow([log_id, chat_id, thread_id, user_id, user_name, user_handle, ts, number])
         
         logger.info(f"Exported {len(logs)} logs.")
         return len(logs)
@@ -170,12 +185,14 @@ class AdminService:
             logging.disable(logging.INFO)
             for row in rows:
                 ts = datetime.fromisoformat(row['ts'])
+                user_handle = row.get('user_handle')
                 message = SimulatedMessage(
                     chat_id=int(row['chat_id']),
                     thread_id=int(row['thread_id']) if row['thread_id'] else None,
                     user_id=int(row['user_id']),
                     user_name=row['user_name'],
-                    ts=ts
+                    ts=ts,
+                    user_handle=user_handle
                 )
                 number = int(row['number'])
 

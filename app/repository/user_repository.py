@@ -70,11 +70,12 @@ class UserRepository:
             str: The SQL query string.
         """
         return """
-        INSERT INTO user_data (user_id, chat_id, user_name, numbers_bitmap)
-        VALUES (%s, %s, %s, set_bit(repeat('0', 128)::bit(128), %s, 1))
+        INSERT INTO user_data (user_id, chat_id, user_name, user_handle, numbers_bitmap)
+        VALUES (%s, %s, %s, %s, set_bit(repeat('0', 128)::bit(128), %s, 1))
         ON CONFLICT (user_id, chat_id) DO UPDATE
         SET 
             user_name = EXCLUDED.user_name,
+            user_handle = EXCLUDED.user_handle,
             numbers_bitmap = set_bit(user_data.numbers_bitmap, %s, 1)
         """
 
@@ -86,11 +87,12 @@ class UserRepository:
             str: The SQL query string.
         """
         return """
-        INSERT INTO user_data (user_id, chat_id, user_name, numbers_bitmap, achievements)
-        VALUES (%s, %s, %s, set_bit(repeat('0', 128)::bit(128), %s, 1), %s)
+        INSERT INTO user_data (user_id, chat_id, user_name, user_handle, numbers_bitmap, achievements)
+        VALUES (%s, %s, %s, %s, set_bit(repeat('0', 128)::bit(128), %s, 1), %s)
         ON CONFLICT (user_id, chat_id) DO UPDATE
         SET 
             user_name = EXCLUDED.user_name,
+            user_handle = EXCLUDED.user_handle,
             numbers_bitmap = set_bit(user_data.numbers_bitmap, %s, 1),
             achievements = CASE 
                 WHEN user_data.achievements IS NULL OR user_data.achievements = '' THEN EXCLUDED.achievements

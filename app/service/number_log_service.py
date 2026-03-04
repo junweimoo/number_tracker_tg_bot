@@ -625,6 +625,7 @@ class NumberLogService:
                     message.user_id,
                     message.chat_id,
                     user_name,
+                    message.username,
                     number,
                     new_achievements_str,
                     number
@@ -635,6 +636,7 @@ class NumberLogService:
                     message.user_id,
                     message.chat_id,
                     user_name,
+                    message.username,
                     number,
                     number
                 )
@@ -676,7 +678,7 @@ class NumberLogService:
 
             # Log Success
             duration = time.perf_counter() - start_time
-            logger.info(f"Logged number {number}, attendance, and count for user {message.user_id} in {duration:.6f}s")
+            logger.info(f"Logged number {number} for user {message.user_id} in {duration:.6f}s")
 
             # --- Send Feedback (Reaction & Reply) ---
             if self.bot and not is_import and str(message.chat_id) not in self.config.silent_chat_ids:
