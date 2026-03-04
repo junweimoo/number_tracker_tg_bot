@@ -6,6 +6,7 @@ import os
 from datetime import datetime
 
 from scheduled.daily_backup import DailyBackupTask
+from scheduled.daily_reminder import DailyReminderTask
 from scheduled.daily_stats import DailyStatsTask
 from database.database_schema import SchemaManager
 
@@ -41,7 +42,7 @@ class AdminService:
     """
     Service for administrative tasks like invoking scheduled jobs and importing/exporting data.
     """
-    def __init__(self, bot, repositories, visualization_service, number_log_service, stats_view_service, config, db=None):
+    def __init__(self, bot, repositories, visualization_service, number_log_service, stats_view_service, reminder_service, config, db=None):
         """
         Initializes the AdminService.
 
@@ -61,6 +62,7 @@ class AdminService:
         self.visualization_service = visualization_service
         self.number_log_service = number_log_service
         self.stats_view_service = stats_view_service
+        self.reminder_service = reminder_service
         self.config = config
         self.db = db
         self.schema_manager = SchemaManager(db) if db else None
@@ -90,12 +92,21 @@ class AdminService:
             self.config
         )
 
+        reminder_task = DailyReminderTask(
+            self.bot,
+            chat_id,
+            self.reminder_service,
+            self.config
+        )
+
         if job_name == 'midnight_stats':
             await stats_task.run_midnight_stats()
         elif job_name == 'midday_stats':
             await stats_task.run_midday_stats()
         elif job_name == 'daily_backup':
             await backup_task.run_daily_backup()
+        elif job_name == "daily_reminder":
+            await reminder_task.run_reminder()
         else:
             raise ValueError(f"Unknown job name: {job_name}")
 

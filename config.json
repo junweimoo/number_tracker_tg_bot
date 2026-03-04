@@ -29,7 +29,8 @@
   },
   "scheduled_jobs": {
     "midday_stats": {"h": "13", "m": "0", "s": "0"},
-    "midnight_stats": {"h": "0", "m": "0", "s": "0"}
+    "midnight_stats": {"h": "0", "m": "0", "s": "0"},
+    "reminder": {"h": "23", "m": "0", "s": "0"}
   },
   "replies": {
     "reply_message": "I detected the number: {number}",

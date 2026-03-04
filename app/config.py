@@ -104,3 +104,7 @@ class Config:
     @property
     def number_cooldown_seconds(self):
         return int(self.data.get('number_cooldown_seconds', '65'))
+
+    @property
+    def reminder_message(self):
+        return self.data.get('reminder_message', '{users_string}')

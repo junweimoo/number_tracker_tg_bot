@@ -13,7 +13,9 @@ from handlers import (
     visualize_chat_match_graph_handler, visualize_my_match_graph_handler, visualize_personal_profile_handler,
     invoke_job_handler, export_handler, import_handler, chat_match_proportions_handler, my_match_proportions_handler)
 from scheduled.daily_backup import DailyBackupTask
+from scheduled.daily_reminder import DailyReminderTask
 from service.number_log_service import NumberLogService
+from service.reminder_service import ReminderService
 from service.stats_view_service import StatsViewService
 from service.visualization_service import VisualizationService
 from service.admin_service import AdminService
@@ -72,6 +74,7 @@ async def main():
     stats_view_service = StatsViewService(db, config, repositories)
     visualization_service = VisualizationService(db, config, repositories)
     visualization_service.set_stats_view_service(stats_view_service)
+    reminder_service = ReminderService(db, repositories, config)
 
     # Initialize Scheduler
     scheduler = Scheduler()
@@ -83,16 +86,18 @@ async def main():
         'number_log_service': number_log_service,
         'stats_view_service': stats_view_service,
         'visualization_service': visualization_service,
+        'reminder_service': reminder_service,
         'scheduler': scheduler
     }
     bot = TelegramBot(TOKEN, context=context)
     number_log_service.set_bot(bot)
     stats_view_service.set_bot(bot)
     visualization_service.set_bot(bot)
+    reminder_service.set_bot(bot)
 
     # Initialize Admin Service
     admin_service = AdminService(bot, repositories, visualization_service,
-                                 number_log_service, stats_view_service, config, db)
+                                 number_log_service, stats_view_service, reminder_service, config, db)
     context['admin_service'] = admin_service
 
     # Register Handlers
@@ -152,6 +157,15 @@ async def main():
                                          int(midday_stats_config.get("h")),
                                          int(midday_stats_config.get("m")),
                                          int(midday_stats_config.get("s")),
+                                         tz)
+
+        reminder_task = DailyReminderTask(bot, chat_id, reminder_service, config)
+
+        reminder_config = jobs_config.get("reminder")
+        scheduler.register_recurring_job(reminder_task.run_reminder,
+                                         int(reminder_config.get("h")),
+                                         int(reminder_config.get("m")),
+                                         int(reminder_config.get("s")),
                                          tz)
 
     # Start Scheduler
