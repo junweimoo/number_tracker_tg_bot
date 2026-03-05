@@ -174,15 +174,16 @@ class UserRepository:
             query = "SELECT user_name, numbers_bitmap FROM user_data WHERE chat_id = %s"
             return await self.db.fetch_all(query, (chat_id,))
 
-    async def get_users_with_last_login(self, last_login_date):
+    async def get_users_with_last_login(self, last_login_date, chat_id):
         """
         Fetches the user_name and user_handle where the last_login_date is as given.
 
         Args:
             last_login_date: The date to filter by.
+            chat_id: The ID of the chat
 
         Returns:
             list: A list of tuples containing user_name and user_handle.
         """
-        query = "SELECT user_name, user_handle FROM user_data WHERE last_login_date = %s"
-        return await self.db.fetch_all(query, (last_login_date,))
+        query = "SELECT user_name, user_handle FROM user_data WHERE last_login_date = %s AND chat_id = %s"
+        return await self.db.fetch_all(query, (last_login_date, chat_id))

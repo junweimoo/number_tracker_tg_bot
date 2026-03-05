@@ -33,7 +33,7 @@ class ReminderService:
         tz = timezone(timedelta(hours=self.config.timezone_gmt))
         yesterday = (datetime.now(tz) - timedelta(days=1)).date()
 
-        users = await self.user_repository.get_users_with_last_login(yesterday)
+        users = await self.user_repository.get_users_with_last_login(yesterday, chat_id)
 
         if not users:
             return None
